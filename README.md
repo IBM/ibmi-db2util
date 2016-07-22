@@ -26,6 +26,14 @@ You may try pre-compiled test version at Yips link (V7r1+).
 #Run
 
 ```
+bash-4.3$ db2util                                                                         
+Syntax: db2util 'sql statement' [json|comma|space] -args parm1 parm2 ...
+  Control record(s) output:
+    json - {"records":[{"name"}:{"value"},{"name"}:{"value"},...]}
+    comma- "value","value",...
+    space- "value" "value" ...
+Version: 1.0.1 beta
+
 bash-4.3$ db2util "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'"
 "839283","Jones   ","B D","21B NW 135 St","Clay  ","NY","13041","400","1","100.00",".00"
 "392859","Vine    ","S S","PO Box 79    ","Broton","VT","5046","700","1","439.00",".00"
