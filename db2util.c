@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <sqlcli1.h>
 
+#define DB2UTIL_VERSION "1.0.1 beta"
+
 #define SQL_IS_INTEGER 0
 
 #define DB2UTIL_MAX_ARGS 32
@@ -315,6 +317,7 @@ void db2util_help() {
   printf("    json - {\"records\":[{\"name\"}:{\"value\"},{\"name\"}:{\"value\"},...]}\n");
   printf("    comma- \"value\",\"value\",...\n");
   printf("    space- \"value\" \"value\" ...\n");
+  printf("Version: %s\n", DB2UTIL_VERSION);
 }
 
 
