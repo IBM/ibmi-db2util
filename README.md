@@ -50,7 +50,7 @@ bash-4.3$ db2util "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='V
 DB2:
   /* TODO:
    * if we have args, switch to use prepare/excute
-   * ("select * from QIWSs/QCUSTCDT where LSTNAM=? or LSTNAM=?")
+   * ("select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?")
    */
 
 
