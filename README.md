@@ -20,6 +20,7 @@ gcc -g db2util.o -L. -lpthreads -liconv -ldl -lpthread -ldb400 -o db2util
 #Compiled version
 
 You may try pre-compiled test version at Yips link (V7r1+).
+
 * http://yips.idevcloud.com/wiki/index.php/Databases/DB2Util
 
 #Run
