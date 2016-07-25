@@ -10,7 +10,12 @@ Aaron asked about PASE db2 utility similar to the one in ILE (qsh -> db2).
 
 #Compile
 
+Assume Option 3 GCC pkg_perzl_gcc-4.8.3.lst
+
 ```
+$ export PATH=/opt/freeware/bin:$PATH
+$ export LIBPATH=/opt/freeware/lib:$LIBPATH
+
 $ cd db2util
 $ make
 gcc -g -I. -I/usr/include -I.. -c db2util.c
@@ -26,42 +31,36 @@ You may try pre-compiled test version at Yips link (V7r1+).
 #Run
 
 ```
-bash-4.3$ db2util                                                                         
-Syntax: db2util 'sql statement' [json|comma|space] -args parm1 parm2 ...
-  Control record(s) output:
-    json - {"records":[{"name"}:{"value"},{"name"}:{"value"},...]}
-    comma- "value","value",...
-    space- "value" "value" ...
-Version: 1.0.1 beta
+bash-4.3$ db2util
+Syntax: db2util 'sql statement' [-h -o [json|comma|space] -p parm1 parm2 ...]
+-h      help
+-o [json|comma|space]
+ json  - {"records":[{"name"}:{"value"},{"name"}:{"value"},...]}
+ comma - "value","value",...
+ space - "value" "value" ...
+-p parm1 parm2 ...
+Version: 1.0.2 beta
 
 bash-4.3$ db2util "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'"
 "839283","Jones   ","B D","21B NW 135 St","Clay  ","NY","13041","400","1","100.00",".00"
 "392859","Vine    ","S S","PO Box 79    ","Broton","VT","5046","700","1","439.00",".00"
 "392859","Vine    ","S S","PO Box 79    ","Broton","VT","5046","700","1","439.00",".00"
 
-bash-4.3$ db2util "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'" space
-"839283" "Jones   " "B D" "21B NW 135 St" "Clay  " "NY" "13041" "400" "1" "100.00" ".00"
-"392859" "Vine    " "S S" "PO Box 79    " "Broton" "VT" "5046" "700" "1" "439.00" ".00"
-"392859" "Vine    " "S S" "PO Box 79    " "Broton" "VT" "5046" "700" "1" "439.00" ".00"
-
-bash-4.3$ db2util "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'" json 
+bash-4.3$ db2util "select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?" -p Jones Vine -o json 
 {"records":[
 {"CUSNUM":"839283","LSTNAM":"Jones   ","INIT":"B D","STREET":"21B NW 135 St","CITY":"Clay  ","STATE":"NY","ZIPCOD":"13041","CDTLMT":"400","CHGCOD":"1","BALDUE":"100.00","CDTDUE":".00"},
 {"CUSNUM":"392859","LSTNAM":"Vine    ","INIT":"S S","STREET":"PO Box 79    ","CITY":"Broton","STATE":"VT","ZIPCOD":"5046","CDTLMT":"700","CHGCOD":"1","BALDUE":"439.00","CDTDUE":".00"},
 {"CUSNUM":"392859","LSTNAM":"Vine    ","INIT":"S S","STREET":"PO Box 79    ","CITY":"Broton","STATE":"VT","ZIPCOD":"5046","CDTLMT":"700","CHGCOD":"1","BALDUE":"439.00","CDTDUE":".00"}
 ]}
+bash-4.3$ db2util "select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?" -p Jones Vine -o space
+"839283" "Jones   " "B D" "21B NW 135 St" "Clay  " "NY" "13041" "400" "1" "100.00" ".00"
+"392859" "Vine    " "S S" "PO Box 79    " "Broton" "VT" "5046" "700" "1" "439.00" ".00"
+"392859" "Vine    " "S S" "PO Box 79    " "Broton" "VT" "5046" "700" "1" "439.00" ".00"
 ```
 
 ##Future:
 
 ```
-DB2:
-  /* TODO:
-   * if we have args, switch to use prepare/excute
-   * ("select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?")
-   */
-
-
 XMLSERVICE:
   /* TODO:
    * Add an xmlservice interface using Db2 connection (iplugr)
