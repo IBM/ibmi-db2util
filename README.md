@@ -56,6 +56,26 @@ bash-4.3$ db2util "select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?" -p Jo
 "839283" "Jones   " "B D" "21B NW 135 St" "Clay  " "NY" "13041" "400" "1" "100.00" ".00"
 "392859" "Vine    " "S S" "PO Box 79    " "Broton" "VT" "5046" "700" "1" "439.00" ".00"
 "392859" "Vine    " "S S" "PO Box 79    " "Broton" "VT" "5046" "700" "1" "439.00" ".00"
+
+bash-4.3$ db2util "call xmlservice.iplugr512k(?,?,?)" -p "*na" "*here" "<?xml version='1.0'?><xmlservice><sh>system -i 'dsplibl'</sh></xmlservice>"
+"<?xml version='1.0'?><xmlservice><sh>
+ 5770SS1 V7R1M0  100423                    Library List                                          7/25/16 15:09:42        Page    1
+                          ASP
+   Library     Type       Device      Text Description
+   QSYS        SYS                    System Library
+   QSYS2       SYS                    System Library for CPI's
+   QHLPSYS     SYS
+   QUSRSYS     SYS                    System Library for Users
+   QGPL        USR                    General Purpose Library
+   QTEMP       USR
+   QDEVELOP    USR
+   QBLDSYS     USR
+   QBLDSYSR    USR
+                          * * * * *  E N D  O F  L I S T I N G  * * * * *
+</sh>
+</xmlservice>"
+
+
 ```
 
 ##Future:

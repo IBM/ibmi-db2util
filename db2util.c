@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <sqlcli1.h>
 
-#define DB2UTIL_VERSION "1.0.2 beta"
+#define DB2UTIL_VERSION "1.0.3 beta"
 
 #define SQL_IS_INTEGER 0
 
@@ -189,6 +189,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   SQLSMALLINT name_length = 0;
   SQLCHAR *buff_name[DB2UTIL_MAX_COLS];
   SQLCHAR *buff_value[DB2UTIL_MAX_COLS];
+  SQLINTEGER buff_len[DB2UTIL_MAX_COLS];
   SQLSMALLINT type = 0;
   SQLUINTEGER size = 0;
   SQLSMALLINT scale = 0;
@@ -206,6 +207,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   for (i=0;i < DB2UTIL_MAX_COLS;i++) {
     buff_name[i] = NULL;
     buff_value[i] = NULL;
+    buff_len[i] = 0;
   }
 
   /* ccsid */
@@ -242,9 +244,10 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
       rc = SQLDescribeParam((SQLHSTMT)hstmt, (SQLUSMALLINT)(i + 1), 
              &sql_data_type, &sql_precision, &sql_scale, &sql_nullable);
       db2util_check_sql_errors(hstmt, SQL_HANDLE_STMT, rc);
+      buff_len[i] = SQL_NTS;
       rc = SQLBindParameter((SQLHSTMT)hstmt, (SQLUSMALLINT)(i + 1),
              SQL_PARAM_INPUT, SQL_CHAR, sql_data_type,
-             sql_precision, sql_scale, argv[i], 0, NULL);
+             sql_precision, sql_scale, argv[i], 0, &buff_len[i]);
       db2util_check_sql_errors(hstmt, SQL_HANDLE_STMT, rc);
     }
   }
@@ -309,6 +312,9 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
     db2util_output_record_array_beg(fmt);
     while (rc == SQL_SUCCESS) {
       rc = SQLFetch(hstmt);
+      if (rc == SQL_NO_DATA_FOUND) {
+        break;
+      }
       db2util_output_record_row_beg(fmt, recs);
       recs += 1;
       for (i = 0 ; i < nResultCols; i++) {
