@@ -27,9 +27,9 @@ Apache REST json interface to db2util.
 $ cd db2util/rpgcgi
 $ ./makedb2util.sh
 
--- Change line makedb2util.sh --
+-- Change line makedb2util.sh (full path to chroot) --
 MYCHRROT="/QOpenSys/zend7/home/zend7/db2util/rpgcgi/"
--- to --
+-- to (also work non-chroot) --
 MYCHRROT="/QOpenSys/where-you-are"
 ```
 Note: makedb2util.sh script uses db2util. 
