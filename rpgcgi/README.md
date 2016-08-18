@@ -4,6 +4,23 @@
 
 Apache REST json interface to db2util. 
 
+# json syntax
+```
+ *************************************************
+ example: 
+ http://myibmi/db2/db2util.pgm?json="
+ {
+ "query":"select * from QIWS/QCUSTCDT where LSTNAM=?",
+ "parm":["Jones"]
+ }"
+ -- or --
+ http://myibmi/db2/db2util.pgm?json="
+ {
+ "cmd":"CRTLIB LIB(db2util) TYPE(*PROD) TEXT('frog')"
+ }"
+ *************************************************
+```
+
 # compile
 
 ```
