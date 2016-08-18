@@ -8,7 +8,7 @@ Welcome to the db2util project. Goal is PASE DB2 CLI command line interface driv
 
 Aaron asked about PASE db2 utility similar to the one in ILE (qsh -> db2).
 
-PHP team asked about use db2util as RPGCGI json (see db2util/readme.md).
+PHP team asked about use db2util as RPGCGI json (see Sources db2util/rpgcgi/README.md).
 
 #Compile
 
