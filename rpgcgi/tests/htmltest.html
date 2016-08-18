@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>
+DB2UTIL 
+</title>
+</head>
+<body>
+<form action="http://ut28p63/db2/db2util.pgm" accept-charset="utf-8" method="get">
+<input type="hidden" name="json" id="json" />
+<input type="submit" value="test me" />
+</form>
+<script>
+document.getElementById('json').value = 
+"{\"query\":\"select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?\",\"parm\":[\"Jones\",\"Vine\"]}";
+</script>
+</body>

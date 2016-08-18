@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <sqlcli1.h>
 
-#define DB2UTIL_VERSION "1.0.3 beta"
+#define DB2UTIL_VERSION "1.0.4 beta"
 
 #define SQL_IS_INTEGER 0
 
@@ -26,25 +27,33 @@
 #define DB2UTIL_OUT_JSON 12
 #define DB2UTIL_OUT_SPACE 13
 
+#define DB2UTIL_XMLSERVICE_CMD 15
+static char * db2util_xmlservice_query = "call xmlservice.iplugr512k(?, ?, ?)";
+static char * db2util_xmlservice_ipc = "*na";
+static char * db2util_xmlservice_ctl = "*here";
+
 #define DB2UTIL_ARG_INPUT 20
 
-int db2util_hash_key(char * str) {
-  int key = DB2UTIL_UNKNOWN;
-  if (strcmp(str,"-h") == 0) {
-    key = DB2UTIL_CMD_HELP;
-  } else if (strcmp(str,"-o") == 0) {
-    key = DB2UTIL_OUT_FORMAT;
-  } else if (strcmp(str,"json") == 0) {
-    key = DB2UTIL_OUT_JSON;
-  } else if (strcmp(str,"comma") == 0) {
-    key = DB2UTIL_OUT_COMMA;
-  } else if (strcmp(str,"space") == 0) {
-    key = DB2UTIL_OUT_SPACE;
-  } else if (strcmp(str,"-p") == 0) {
-    key = DB2UTIL_ARG_INPUT;
-  }
-  return key;
+static char * db2util_name = "db2util";
+static char * db2util_out_set_xc = "-xc";
+static char * db2util_out_set_p = "-p";
+static char * db2util_out_set_o = "-o";
+static char * db2util_out_set_json_buff = "bjson";
+
+#define DB2UTIL_OUT_JSON_BUFF 22
+static char * db2util_out_caller = NULL;
+
+
+void db2util_printf(const char * format, ...) {
+  char *p = (char *) NULL; 
+
+  p = db2util_out_caller + strlen(db2util_out_caller);
+  va_list args;
+  va_start(args, format);
+  vsprintf(p, format, args);
+  va_end(args);
 }
+
 
 int db2util_ccsid() {
   char * env_ccsid = getenv("CCSID");
@@ -69,6 +78,9 @@ void db2util_free(char *buffer) {
 
 void db2util_output_record_array_beg(int fmt) {
   switch (fmt) {
+  case DB2UTIL_OUT_JSON_BUFF:
+    db2util_printf("{\"records\":[");
+    break;
   case DB2UTIL_OUT_JSON:
     printf("{\"records\":[");
     break;
@@ -81,6 +93,13 @@ void db2util_output_record_array_beg(int fmt) {
 }
 void db2util_output_record_row_beg(int fmt, int flag) {
   switch (fmt) {
+  case DB2UTIL_OUT_JSON_BUFF:
+    if (flag) {
+      db2util_printf(",\n{");
+    } else {
+      db2util_printf("\n{");
+    }
+    break;
   case DB2UTIL_OUT_JSON:
     if (flag) {
       printf(",\n{");
@@ -97,6 +116,12 @@ void db2util_output_record_row_beg(int fmt, int flag) {
 }
 void db2util_output_record_name_value(int fmt, int flag, char *name, char *value) {
   switch (fmt) {
+  case DB2UTIL_OUT_JSON_BUFF:
+    if (flag) {
+      db2util_printf(",");
+    }
+    db2util_printf("\"%s\":\"%s\"",name,value);
+    break;
   case DB2UTIL_OUT_JSON:
     if (flag) {
       printf(",");
@@ -120,6 +145,9 @@ void db2util_output_record_name_value(int fmt, int flag, char *name, char *value
 }
 void db2util_output_record_row_end(int fmt) {
   switch (fmt) {
+  case DB2UTIL_OUT_JSON_BUFF:
+    db2util_printf("}");
+    break;
   case DB2UTIL_OUT_JSON:
     printf("}");
     break;
@@ -134,6 +162,9 @@ void db2util_output_record_row_end(int fmt) {
 }
 void db2util_output_record_array_end(int fmt) {
   switch (fmt) {
+  case DB2UTIL_OUT_JSON_BUFF:
+    db2util_printf("\n]}\n");
+    break;
   case DB2UTIL_OUT_JSON:
     printf("\n]}\n");
     break;
@@ -148,11 +179,11 @@ void db2util_output_record_array_end(int fmt) {
 }
 
 /*
-  db2util_check_sql_errors(henv, SQL_HANDLE_ENV,   rc);
-  db2util_check_sql_errors(hdbc, SQL_HANDLE_DBC,   rc);
-  db2util_check_sql_errors(hstmt, SQL_HANDLE_STMT, rc);
+  db2util_check_sql_errors(fmt, henv, SQL_HANDLE_ENV,   rc);
+  db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC,   rc);
+  db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc);
 */
-void db2util_check_sql_errors( SQLHANDLE handle, SQLSMALLINT hType, int rc)
+int db2util_check_sql_errors(int fmt, SQLHANDLE handle, SQLSMALLINT hType, int rc)
 {
   SQLCHAR msg[SQL_MAX_MESSAGE_LENGTH + 1];
   SQLCHAR sqlstate[SQL_SQLSTATE_SIZE + 1];
@@ -170,9 +201,16 @@ void db2util_check_sql_errors( SQLHANDLE handle, SQLSMALLINT hType, int rc)
         p = &msg[length-1];
         *p = '\0';
       }
-      printf("Error %s SQLCODE=%d\n", msg, sqlcode);
+      if (fmt == DB2UTIL_OUT_JSON_BUFF) {
+        db2util_printf("{\"ok\":false,\"reason\":\"error %s SQLCODE=%d\"}",msg, sqlcode);
+        return SQL_ERROR;
+      } else {
+        fprintf(stderr, "Error %s SQLCODE=%d\n", msg, sqlcode);
+        return SQL_ERROR;
+      } 
     }
   }
+  return SQL_SUCCESS;
 }
 
 int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
@@ -222,48 +260,70 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   }
   /* connect */
   rc = SQLAllocHandle( SQL_HANDLE_DBC, henv, &hdbc);
-  db2util_check_sql_errors(hdbc, SQL_HANDLE_DBC,   rc);
+  if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC,   rc) == SQL_ERROR) {
+    return SQL_ERROR;
+  }
   rc = SQLConnect( (SQLHDBC)hdbc, 
          (SQLCHAR *)NULL, (SQLSMALLINT)0,
          (SQLCHAR *)NULL, (SQLSMALLINT)0,
          (SQLCHAR *)NULL, (SQLSMALLINT)0);
-  db2util_check_sql_errors(hdbc, SQL_HANDLE_DBC,   rc);
+  if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC, rc) == SQL_ERROR) {
+    return SQL_ERROR;
+  }
   rc = SQLSetConnectAttr((SQLHDBC)hdbc, SQL_ATTR_DBC_SYS_NAMING, (SQLPOINTER)&attr, SQL_IS_INTEGER);
-  db2util_check_sql_errors(hdbc, SQL_HANDLE_DBC,   rc);
+  if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC, rc) == SQL_ERROR) {
+    return SQL_ERROR;
+  }
   /* statement */
   rc = SQLAllocHandle(SQL_HANDLE_STMT, (SQLHDBC) hdbc, &hstmt);
-  db2util_check_sql_errors(hstmt, SQL_HANDLE_STMT, rc);
+  if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
+    return SQL_ERROR;
+  }
   /* prepare */
   rc = SQLPrepare((SQLHSTMT)hstmt, (SQLCHAR*)stmt_str, (SQLINTEGER)SQL_NTS);
-  db2util_check_sql_errors(hstmt, SQL_HANDLE_STMT, rc);
+  if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
+    return SQL_ERROR;
+  }
   /* number of input parms */
   rc = SQLNumParams((SQLHSTMT)hstmt, (SQLSMALLINT*)&nParms);
-  db2util_check_sql_errors(hstmt, SQL_HANDLE_STMT, rc);
+  if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
+    return SQL_ERROR;
+  }
   if (nParms > 0) {
     for (i = 0; i < nParms; i++) {
       rc = SQLDescribeParam((SQLHSTMT)hstmt, (SQLUSMALLINT)(i + 1), 
              &sql_data_type, &sql_precision, &sql_scale, &sql_nullable);
-      db2util_check_sql_errors(hstmt, SQL_HANDLE_STMT, rc);
+      if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
+        return SQL_ERROR;
+      }
       buff_len[i] = SQL_NTS;
       rc = SQLBindParameter((SQLHSTMT)hstmt, (SQLUSMALLINT)(i + 1),
              SQL_PARAM_INPUT, SQL_CHAR, sql_data_type,
              sql_precision, sql_scale, argv[i], 0, &buff_len[i]);
-      db2util_check_sql_errors(hstmt, SQL_HANDLE_STMT, rc);
+      if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
+        return SQL_ERROR;
+      }
     }
   }
   /* execute */
   rc = SQLExecute((SQLHSTMT)hstmt);
-  db2util_check_sql_errors(hstmt, SQL_HANDLE_STMT, rc);
+  if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
+    return SQL_ERROR;
+  }
   /* result set */
   rc = SQLNumResultCols((SQLHSTMT)hstmt, &nResultCols);
-  db2util_check_sql_errors(hstmt, SQL_HANDLE_STMT, rc);
+  if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
+    return SQL_ERROR;
+  }
   if (nResultCols > 0) {
     for (i = 0 ; i < nResultCols; i++) {
       size = DB2UTIL_EXPAND_COL_NAME;
       buff_name[i] = db2util_new(size);
       buff_value[i] = NULL;
       rc = SQLDescribeCol((SQLHSTMT)hstmt, (SQLSMALLINT)(i + 1), (SQLCHAR *)buff_name[i], size, &name_length, &type, &size, &scale, &nullable);
-      db2util_check_sql_errors(hstmt, SQL_HANDLE_STMT, rc);
+      if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
+        return SQL_ERROR;
+      }
       /* dbcs expansion */
       switch (type) {
       case SQL_CHAR:
@@ -306,7 +366,9 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
         rc = SQLBindCol((SQLHSTMT)hstmt, (i + 1), SQL_CHAR, buff_value[i], size, &fStrLen);
         break;
       }
-      db2util_check_sql_errors(hstmt, SQL_HANDLE_STMT, rc);
+      if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
+        return SQL_ERROR;
+      }
     }
     rc = SQL_SUCCESS;
     db2util_output_record_array_beg(fmt);
@@ -343,17 +405,49 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   return rc;
 }
 
-void db2util_help() {
-  printf("Syntax: db2util 'sql statement' [-h -o [json|comma|space] -p parm1 parm2 ...]\n");
+void db2util_help(int fmt) {
+  if (fmt == DB2UTIL_OUT_JSON_BUFF) {
+    db2util_printf("{\"ok\":false,\"reason\":\"params invalid\"}");
+    return;
+  }
+  printf("Syntax: db2util 'sql statement' [-h -xc -o [json|comma|space] -p parm1 parm2 ...]\n");
   printf("-h      help\n");
+  printf("-xc      sql statement is xmlservice command\n");
   printf("-o [json|comma|space]\n");
   printf(" json  - {\"records\":[{\"name\"}:{\"value\"},{\"name\"}:{\"value\"},...]}\n");
   printf(" comma - \"value\",\"value\",...\n");
   printf(" space - \"value\" \"value\" ...\n");
   printf("-p parm1 parm2 ...\n");
   printf("Version: %s\n", DB2UTIL_VERSION);
+  printf("\nExample (DB2)\n");
+  printf("db2util \"select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'\"\n");
+  printf("db2util \"select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?\" -p Jones Vine -o json\n");
+  printf("db2util \"select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?\" -p Jones Vine -o space\n");
+  printf("\nExample (XMLSERVICE):\n");
+  printf("db2util \"DSPLIBL\" -xc\n");
 }
 
+int db2util_hash_key(char * str) {
+  int key = DB2UTIL_UNKNOWN;
+  if (strcmp(str,"-h") == 0) {
+    key = DB2UTIL_CMD_HELP;
+  } else if (strcmp(str,"-xc") == 0) {
+    key = DB2UTIL_XMLSERVICE_CMD;
+  } else if (strcmp(str,"-o") == 0) {
+    key = DB2UTIL_OUT_FORMAT;
+  } else if (strcmp(str,"json") == 0) {
+    key = DB2UTIL_OUT_JSON;
+  } else if (strcmp(str,"bjson") == 0) {
+    key = DB2UTIL_OUT_JSON_BUFF;
+  } else if (strcmp(str,"comma") == 0) {
+    key = DB2UTIL_OUT_COMMA;
+  } else if (strcmp(str,"space") == 0) {
+    key = DB2UTIL_OUT_SPACE;
+  } else if (strcmp(str,"-p") == 0) {
+    key = DB2UTIL_ARG_INPUT;
+  }
+  return key;
+}
 
 int main(int argc, char *argv[]) {
   SQLRETURN rc = 0;
@@ -366,6 +460,7 @@ int main(int argc, char *argv[]) {
   char * query = NULL;
   int test = DB2UTIL_UNKNOWN;
   int test2 = DB2UTIL_UNKNOWN;
+  char buffer[4096];
   /* clear parm markers */
   for (i=0; i < DB2UTIL_MAX_ARGS; i++) {
     iargv[i] = NULL;
@@ -374,6 +469,7 @@ int main(int argc, char *argv[]) {
   for (i=1; i < argc; i++) {
     test = db2util_hash_key(argv[i]);
     switch (test) {
+    /* -p parm1 parm2 */
     case DB2UTIL_ARG_INPUT:
       for (i++; i < argc; i++) {
         test2 = db2util_hash_key(argv[i]);
@@ -385,12 +481,14 @@ int main(int argc, char *argv[]) {
         iargc += 1;
       }
       break;
+    /* -o [json|comma|space|bjson] */
     case DB2UTIL_OUT_FORMAT:
       if (i + 1 < argc) {
         test2 = db2util_hash_key(argv[i+1]);
         switch (test2) {
         case DB2UTIL_OUT_COMMA:
         case DB2UTIL_OUT_JSON:
+        case DB2UTIL_OUT_JSON_BUFF:
         case DB2UTIL_OUT_SPACE:
           fmt = test2;
           i += 1;
@@ -400,6 +498,26 @@ int main(int argc, char *argv[]) {
         }
       }
       break;
+    /* -xc */
+    case DB2UTIL_XMLSERVICE_CMD:
+      memset(buffer,0,sizeof(buffer));
+      strcat(buffer,"<?xml version='1.0'?>\n");
+      strcat(buffer,"<xmlservice>\n");
+      strcat(buffer,"<sh>system -i \"");
+      strcat(buffer,query);
+      strcat(buffer,"\"</sh>\n");
+      strcat(buffer,"</xmlservice>");
+      query = db2util_xmlservice_query;
+      iargc = 0;
+      iargv[iargc] = db2util_xmlservice_ipc;
+      iargc += 1;
+      iargv[iargc] = db2util_xmlservice_ctl;
+      iargc += 1;
+      iargv[iargc] = (char *)&buffer;
+      iargc += 1;
+      iargv[iargc] = NULL;
+      break;
+    /* -h */
     case DB2UTIL_CMD_HELP:
       command = DB2UTIL_CMD_HELP;
       i = argc + 1;
@@ -413,6 +531,7 @@ int main(int argc, char *argv[]) {
       break;
     }
   }
+  /* -h */
   if (!query) {
     command = DB2UTIL_CMD_HELP;
   }
@@ -423,8 +542,81 @@ int main(int argc, char *argv[]) {
     break;
   case DB2UTIL_CMD_HELP:
   default:
-    db2util_help();
+    db2util_help(fmt);
     break;
   }
   return -1;
 }
+
+/*
+{
+"query":"select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?",
+"parm":["Jones","Vine"]
+}
+-- or --
+{
+"cmd":"CRTLIB LIB($RPGLIB) TYPE(*PROD) TEXT('frog')"
+}
+*/
+int db2util_query_json(char * json_in_str, int json_in_len, char * json_out_str, int json_out_len) {
+  int i = 0;
+  int rc = SQL_SUCCESS;
+  int argc = 0; 
+  char *argv[1024];
+  int go = 1, step = 0;
+  char *j = NULL, *k = NULL;
+  /* output buffer */
+  db2util_out_caller = json_out_str;
+  memset(json_out_str,0,json_out_len);
+  /* must have program name argv[0] to match command line */
+  for (i=0;i<1024;i++) {
+    argv[i] = NULL;
+  }
+  argv[argc] = db2util_name;
+  argc++;
+  /* copy in data (json) */
+  j = malloc(json_in_len + 1);
+  memcpy(j,json_in_str,json_in_len);
+  /* loop through json input */
+  for (step=0; *j; j+=1) { /* (")thing" */
+    if (*j == '"') {
+      j+=1;
+      k = j;
+      for (go=1; *j && go; j+=1) { /* "thing(") */
+        if (*j == '"') {
+          *j = '\0';
+          go = 0;
+          if (step) {
+            argv[argc] = k;
+            argc++;
+            if (step == 1) { /*  argv[1] = query */
+              step = 0;
+            } else if (step == 3) { /*  argv[1] = *CMD */
+              argv[argc] = db2util_out_set_xc; /* -xc */
+              argc++;
+              step = 0;
+            } /*  argv[n] = parm */
+          } else {
+            if (strcmp(k,"query") == 0) { /* "(query)" */
+              step = 1;
+            } else if (strcmp(k,"parm") == 0) { /* "(parm)" */
+              step = 2;
+              argv[argc] = db2util_out_set_p; /* -p */
+              argc++;
+            } else if (strcmp(k,"cmd") == 0) { /* "(*CMD)" */
+              step = 3;
+            }
+          }
+        } /* if "thing(") */
+      } /* loop 2 */
+    } /* if (")thing" */
+  } /* loop 1 */
+  argv[argc] = db2util_out_set_o; /* -o */
+  argc++;
+  argv[argc] = db2util_out_set_json_buff; /* bjson */
+  argc++;
+  rc = main(argc, argv);
+  free(j);
+  return rc;
+}
+

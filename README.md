@@ -8,6 +8,8 @@ Welcome to the db2util project. Goal is PASE DB2 CLI command line interface driv
 
 Aaron asked about PASE db2 utility similar to the one in ILE (qsh -> db2).
 
+PHP team asked about use db2util as RPGCGI json (see db2util/readme.md).
+
 #Compile
 
 Assume Option 3 GCC pkg_perzl_gcc-4.8.3.lst.
@@ -23,7 +25,7 @@ gcc -g db2util.o -L. -lpthreads -liconv -ldl -lpthread -ldb400 -o db2util
 
 #Compiled version
 
-You may try pre-compiled test version at Yips link (V7r1+).
+You may try pre-compiled test version db2util at Yips link (V7r1+).
 
 * http://yips.idevcloud.com/wiki/index.php/Databases/DB2Util
 
@@ -32,15 +34,23 @@ You may try pre-compiled test version at Yips link (V7r1+).
 Help:
 
 ```
-bash-4.3$ db2util
-Syntax: db2util 'sql statement' [-h -o [json|comma|space] -p parm1 parm2 ...]
+Syntax: db2util 'sql statement' [-h -xc -o [json|comma|space] -p parm1 parm2 ...]
 -h      help
+-xc      sql statement is xmlservice command
 -o [json|comma|space]
  json  - {"records":[{"name"}:{"value"},{"name"}:{"value"},...]}
  comma - "value","value",...
  space - "value" "value" ...
 -p parm1 parm2 ...
-Version: 1.0.3 beta
+Version: 1.0.4 beta
+
+Example (DB2)
+db2util "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'"
+db2util "select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?" -p Jones Vine -o json
+db2util "select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?" -p Jones Vine -o space
+
+Example (XMLSERVICE):
+db2util "DSPLIBL" -xc
 ```
 
 Comma delimter output (default or -o comma):
@@ -72,12 +82,14 @@ bash-4.3$ db2util "select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?" -p Jo
 "392859" "Vine    " "S S" "PO Box 79    " "Broton" "VT" "5046" "700" "1" "439.00" ".00"
 ```
 
-Call with parameter markers (?):
+call XMLSERVICE (cmd):
 
 ```
-bash-4.3$ db2util "call xmlservice.iplugr512k(?,?,?)" -p "*na" "*here" "<?xml version='1.0'?><xmlservice><sh>system -i 'dsplibl'</sh></xmlservice>"
-"<?xml version='1.0'?><xmlservice><sh>
- 5770SS1 V7R1M0  100423                    Library List                                          7/25/16 15:09:42        Page    1
+bash-4.3$ db2util "DSPLIBL" -xc
+"<?xml version='1.0'?>
+<xmlservice>
+<sh>
+ 5770SS1 V7R1M0  100423                    Library List                                          8/18/16 15:48:38        Page    1
                           ASP
    Library     Type       Device      Text Description
    QSYS        SYS                    System Library
@@ -92,18 +104,7 @@ bash-4.3$ db2util "call xmlservice.iplugr512k(?,?,?)" -p "*na" "*here" "<?xml ve
                           * * * * *  E N D  O F  L I S T I N G  * * * * *
 </sh>
 </xmlservice>"
-
 ```
-
-##Future:
-
-```
-XMLSERVICE:
-  /* TODO:
-   * Add an xmlservice interface using Db2 connection (iplugr)
-   */
-```
-
 
 #Contributors
 - Tony Cairns, IBM
