@@ -15,6 +15,9 @@ mput *
 lcd rpgcgi
 cd /QOpenSys/zend7/home/zend7/db2util/rpgcgi
 mput *
+lcd ../fastcgi
+cd /QOpenSys/zend7/home/zend7/db2util/fastcgi
+mput *
 
 quit
 

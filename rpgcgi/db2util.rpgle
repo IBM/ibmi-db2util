@@ -150,25 +150,10 @@
        elseif cMethod='GET';
          rCopy = getenv('QUERY_STRING');
          szContent= strlen(rCopy);
-         // json=({)...}
-         if szContent > 5;
-           rCopy += 5;
-           szContent= strlen(rCopy);
-         endif;
          pContent = allocPaseBlock(szContent);
          if szContent > 0;
            cpybytes(pContent:rCopy:szContent);
          endif;
-       endif;
-       if szContent > 0;
-         pover = pContent;
-         for i = 1 to szContent;
-           if oc = x'2B'; // ascii '+'
-              oc = x'20'; // ascii space
-           endif;
-           pover += 1;
-         endfor;
-         rc = ap_unescape_url(pContent);
        endif;
 
        header1208();

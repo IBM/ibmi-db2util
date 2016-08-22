@@ -548,6 +548,43 @@ int main(int argc, char *argv[]) {
   return -1;
 }
 
+/* http://stackoverflow.com/questions/2673207/c-c-url-decode-library */
+void db2util_urldecode(char *dst, const char *src)
+{
+  char a, b;
+  while (*src) {
+    if ((*src == '%') && ((a = src[1]) && (b = src[2])) && (isxdigit(a) && isxdigit(b))) {
+      if (a >= 'a') {
+        a -= 'a'-'A';
+      }
+      if (a >= 'A') {
+        a -= ('A' - 10);
+      }
+      else {
+        a -= '0';
+      }
+      if (b >= 'a') {
+        b -= 'a'-'A';
+      }
+      if (b >= 'A') {
+        b -= ('A' - 10);
+      }
+      else {
+        b -= '0';
+      }
+      *dst++ = 16*a+b;
+      src+=3;
+    } else if (*src == '+') {
+      *dst++ = ' ';
+      src++;
+    } else {
+      *dst++ = *src++;
+    }
+  }
+  *dst++ = '\0';
+}
+
+
 /*
 {
 "query":"select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?",
@@ -564,7 +601,7 @@ int db2util_query_json(char * json_in_str, int json_in_len, char * json_out_str,
   int argc = 0; 
   char *argv[1024];
   int go = 1, step = 0;
-  char *j = NULL, *k = NULL;
+  char *b = NULL, *a = NULL, *j = NULL, *k = NULL;
   /* output buffer */
   db2util_out_caller = json_out_str;
   memset(json_out_str,0,json_out_len);
@@ -575,10 +612,21 @@ int db2util_query_json(char * json_in_str, int json_in_len, char * json_out_str,
   argv[argc] = db2util_name;
   argc++;
   /* copy in data (json) */
-  j = malloc(json_in_len + 1);
-  memcpy(j,json_in_str,json_in_len);
+  a = malloc(json_in_len + 1);
+  memset(a,0,json_in_len + 1);
+  memcpy(a,json_in_str,json_in_len);
+  /* need html decode? */
+  for (k = a; *k; k += 1) {
+    if (*k == '%') {
+      b = malloc(json_in_len + 1);
+      db2util_urldecode(b,a);
+      free(a);
+      a = b;
+      break;
+    }
+  }
   /* loop through json input */
-  for (step=0; *j; j+=1) { /* (")thing" */
+  for (j = a, step=0; *j; j+=1) { /* (")thing" */
     if (*j == '"') {
       j+=1;
       k = j;
