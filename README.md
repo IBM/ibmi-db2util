@@ -10,6 +10,9 @@ Aaron asked about PASE db2 utility similar to the one in ILE (qsh -> db2).
 
 PHP team asked about use db2util as RPGCGI json (see Sources db2util/rpgcgi/README.md).
 
+Alan team asked about use db2util as FastCGI json (see Sources db2util/fastcgi/README.md).
+
+
 #Compile
 
 Assume Option 3 GCC pkg_perzl_gcc-4.8.3.lst.
@@ -42,7 +45,7 @@ Syntax: db2util 'sql statement' [-h -xc -o [json|comma|space] -p parm1 parm2 ...
  comma - "value","value",...
  space - "value" "value" ...
 -p parm1 parm2 ...
-Version: 1.0.4 beta
+Version: 1.0.5 beta
 
 Example (DB2)
 db2util "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'"

@@ -4,7 +4,7 @@
 #include <stdarg.h>
 #include <sqlcli1.h>
 
-#define DB2UTIL_VERSION "1.0.4 beta"
+#define DB2UTIL_VERSION "1.0.5 beta"
 
 #define SQL_IS_INTEGER 0
 
