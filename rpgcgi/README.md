@@ -77,6 +77,7 @@ bash-4.3$ ls -l /QOpenSys/usr/bin/db2util
 ```
 htmltest.html -- json query using html
 curltest.sh -- json query using curl
+xmltest.sh -- json xmlservice using curl
 ```
 Note: Some tests assume Basic Authorization (see httpd.conf).
 
