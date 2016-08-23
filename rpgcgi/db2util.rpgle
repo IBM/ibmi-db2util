@@ -1,20 +1,6 @@
      H AlwNull(*UsrCtl)
      H BNDDIR('QC2LE')
 
-       // *************************************************
-       // example: 
-       // http://myibmi/db2/db2util.pgm?json="
-       // {
-       // "query":"select * from QIWS/QCUSTCDT where LSTNAM=?",
-       // "parm":["Jones"]
-       // }"
-       // -- or --
-       // http://myibmi/db2/db2util.pgm?json="
-       // {
-       // "cmd":"CRTLIB LIB($RPGLIB) TYPE(*PROD) TEXT('frog')"
-       // }"
-       // *************************************************
-
       /copy ios_h
       /copy iconv_h
       /copy ipase_h

@@ -4,7 +4,7 @@
 #include <stdarg.h>
 #include <sqlcli1.h>
 
-#define DB2UTIL_VERSION "1.0.5 beta"
+#define DB2UTIL_VERSION "1.0.6 beta"
 
 #define SQL_IS_INTEGER 0
 
@@ -28,7 +28,7 @@
 #define DB2UTIL_OUT_SPACE 13
 
 #define DB2UTIL_XMLSERVICE_CMD 15
-static char * db2util_xmlservice_query = "call xmlservice.iplugr512k(?, ?, ?)";
+static char * db2util_xmlservice_lib = "qxmlserv";
 static char * db2util_xmlservice_ipc = "*na";
 static char * db2util_xmlservice_ctl = "*here";
 
@@ -410,7 +410,7 @@ void db2util_help(int fmt) {
     db2util_printf("{\"ok\":false,\"reason\":\"params invalid\"}");
     return;
   }
-  printf("Syntax: db2util 'sql statement' [-h -xc -o [json|comma|space] -p parm1 parm2 ...]\n");
+  printf("Syntax: db2util 'sql statement' [-h -xc [xmlservice lib] -o [json|comma|space] -p parm1 parm2 ...]\n");
   printf("-h      help\n");
   printf("-xc      sql statement is xmlservice command\n");
   printf("-o [json|comma|space]\n");
@@ -425,6 +425,9 @@ void db2util_help(int fmt) {
   printf("db2util \"select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?\" -p Jones Vine -o space\n");
   printf("\nExample (XMLSERVICE):\n");
   printf("db2util \"DSPLIBL\" -xc\n");
+  printf("db2util \"DSPLIBL\" -xc qxmlserv\n");
+  printf("db2util \"DSPLIBL\" -xc xmlservice\n");
+  printf("db2util \"DSPLIBL\" -xc zendsvr6\n");
 }
 
 int db2util_hash_key(char * str) {
@@ -461,6 +464,8 @@ int main(int argc, char *argv[]) {
   int test = DB2UTIL_UNKNOWN;
   int test2 = DB2UTIL_UNKNOWN;
   char buffer[4096];
+  char * xmlservice_lib  = NULL;
+  char query_xmlservice[4096];
   /* clear parm markers */
   for (i=0; i < DB2UTIL_MAX_ARGS; i++) {
     iargv[i] = NULL;
@@ -500,6 +505,15 @@ int main(int argc, char *argv[]) {
       break;
     /* -xc */
     case DB2UTIL_XMLSERVICE_CMD:
+      /* -xc [xmlservice library] */
+      xmlservice_lib  = db2util_xmlservice_lib;
+      if (i + 1 < argc) {
+        test2 = db2util_hash_key(argv[i + 1]);
+        if (test2 == DB2UTIL_UNKNOWN) {
+          xmlservice_lib = argv[i + 1];
+          i++;
+        }
+      }
       memset(buffer,0,sizeof(buffer));
       strcat(buffer,"<?xml version='1.0'?>\n");
       strcat(buffer,"<xmlservice>\n");
@@ -507,7 +521,12 @@ int main(int argc, char *argv[]) {
       strcat(buffer,query);
       strcat(buffer,"\"</sh>\n");
       strcat(buffer,"</xmlservice>");
-      query = db2util_xmlservice_query;
+      /* "call [qxmlserv].iplugr512k(?, ?, ?)" */
+      memset(query_xmlservice,0,sizeof(query_xmlservice));
+      strcat(query_xmlservice,"call ");
+      strcat(query_xmlservice,xmlservice_lib);
+      strcat(query_xmlservice,".iplugr512k(?, ?, ?)");
+      query = query_xmlservice;
       iargc = 0;
       iargv[iargc] = db2util_xmlservice_ipc;
       iargc += 1;
@@ -594,6 +613,11 @@ void db2util_urldecode(char *dst, const char *src)
 {
 "cmd":"CRTLIB LIB($RPGLIB) TYPE(*PROD) TEXT('frog')"
 }
+-- or --
+{
+"cmd":"DSPLIBL",
+"xlib":"XMLSERVICE"
+}
 */
 int db2util_query_json(char * json_in_str, int json_in_len, char * json_out_str, int json_out_len) {
   int i = 0;
@@ -617,7 +641,8 @@ int db2util_query_json(char * json_in_str, int json_in_len, char * json_out_str,
   memcpy(a,json_in_str,json_in_len);
   /* need html decode? */
   for (k = a; *k; k += 1) {
-    if (*k == '%') {
+    j = k + 1;
+    if (*k == '%' && *j == '2') {
       b = malloc(json_in_len + 1);
       db2util_urldecode(b,a);
       free(a);
@@ -653,6 +678,8 @@ int db2util_query_json(char * json_in_str, int json_in_len, char * json_out_str,
               argc++;
             } else if (strcmp(k,"cmd") == 0) { /* "(*CMD)" */
               step = 3;
+            } else if (strcmp(k,"xlib") == 0) { /* "(*xmlservice lib)" */
+              step = 4;
             }
           }
         } /* if "thing(") */

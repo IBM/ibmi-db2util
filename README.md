@@ -37,7 +37,8 @@ You may try pre-compiled test version db2util at Yips link (V7r1+).
 Help:
 
 ```
-Syntax: db2util 'sql statement' [-h -xc -o [json|comma|space] -p parm1 parm2 ...]
+bash-4.3$ db2util -h
+Syntax: db2util 'sql statement' [-h -xc [xmlservice lib] -o [json|comma|space] -p parm1 parm2 ...]
 -h      help
 -xc      sql statement is xmlservice command
 -o [json|comma|space]
@@ -45,7 +46,7 @@ Syntax: db2util 'sql statement' [-h -xc -o [json|comma|space] -p parm1 parm2 ...
  comma - "value","value",...
  space - "value" "value" ...
 -p parm1 parm2 ...
-Version: 1.0.5 beta
+Version: 1.0.6 beta
 
 Example (DB2)
 db2util "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'"
@@ -54,6 +55,9 @@ db2util "select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?" -p Jones Vine -
 
 Example (XMLSERVICE):
 db2util "DSPLIBL" -xc
+db2util "DSPLIBL" -xc qxmlserv
+db2util "DSPLIBL" -xc xmlservice
+db2util "DSPLIBL" -xc zendsvr6
 ```
 
 Comma delimter output (default or -o comma):

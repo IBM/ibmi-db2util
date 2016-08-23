@@ -31,7 +31,7 @@ static void db2fcgi_http_200(char *json)
   printf("HTTP/1.1 200 Ok\r\n"
          "Content-type: application/json; charset=utf-8\r\n"
          "\r\n"
-         "{\"ok\":true,%s}", json);
+         "%s",json);
 }
 
 static void db2fcgi_http_403(char *reason)

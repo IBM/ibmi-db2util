@@ -18,7 +18,13 @@ REST interface to db2util. Results return JSON format.
  {
  "cmd":"CRTLIB LIB(db2util) TYPE(*PROD) TEXT('frog')"
  }"
- *************************************************
+ -- or --
+ http://myibmi/db2/db2util.pgm?json="
+ {
+ "cmd":"dsplibl",
+ "xlib":"xmlservice"
+ }"
+*************************************************
 ```
 
 # compile
