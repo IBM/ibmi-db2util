@@ -4,7 +4,7 @@
 #include <stdarg.h>
 #include <sqlcli1.h>
 
-#define DB2UTIL_VERSION "1.0.6 beta"
+#define DB2UTIL_VERSION "1.0.7 beta"
 
 #define SQL_IS_INTEGER 0
 
@@ -222,6 +222,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   SQLHANDLE hdbc = 0;
   SQLHANDLE hstmt = 0;
   SQLINTEGER attr = SQL_TRUE;
+  SQLINTEGER attr_isolation = SQL_TXN_NO_COMMIT;
   SQLSMALLINT nParms = 0;
   SQLSMALLINT nResultCols = 0;
   SQLSMALLINT name_length = 0;
@@ -271,6 +272,10 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
     return SQL_ERROR;
   }
   rc = SQLSetConnectAttr((SQLHDBC)hdbc, SQL_ATTR_DBC_SYS_NAMING, (SQLPOINTER)&attr, SQL_IS_INTEGER);
+  if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC, rc) == SQL_ERROR) {
+    return SQL_ERROR;
+  }
+  rc = SQLSetConnectAttr((SQLHDBC)hdbc, SQL_ATTR_TXN_ISOLATION, (SQLPOINTER)&attr_isolation, SQL_IS_INTEGER);
   if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC, rc) == SQL_ERROR) {
     return SQL_ERROR;
   }
