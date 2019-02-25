@@ -1,5 +1,5 @@
 # ------IMPORTANT WARNING -------
-This project is under construction.
+This project is (and possibly always will be) under construction. 
 
 
 # db2util
@@ -115,8 +115,11 @@ bash-4.3$ db2util "DSPLIBL" -xc
 
 # Contributors
 - Tony Cairns, IBM
-- Aaron Bartell, Krengel Technology, Inc.
+- Jesse Gorzinski, IBM
+- Aaron Bartell, Krengel Technology, Inc. 
+
 
 # License
 MIT
 
+(This project has been migrated from http://bitbucket.org/litmis/db2util)
