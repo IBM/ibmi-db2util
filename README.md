@@ -1,5 +1,5 @@
 # ------IMPORTANT WARNING -------
-This project is (and possibly always will be) under construction. 
+This project is (and possibly always will be) under construction. It is released as a stable version 1.0.0. Future major releases may break compatibility. 
 
 
 # db2util
@@ -15,22 +15,18 @@ Alan team asked about use db2util as FastCGI json (see Sources db2util/fastcgi/R
 
 # Compile
 
-Assume Option 3 GCC pkg_perzl_gcc-4.8.3.lst.
-
+Typical commands can be used to make and install this project
 ```
-$ export PATH=/opt/freeware/bin:$PATH
-$ export LIBPATH=/opt/freeware/lib:$LIBPATH
-$ cd db2util
-$ make
-gcc -g -I. -I/usr/include -I.. -c db2util.c
-gcc -g db2util.o -L. -lpthreads -liconv -ldl -lpthread -ldb400 -o db2util
+make
+make install
 ```
 
 # Compiled version
+You can install the pre-compiled version on IBM i with the yum package manager (for more information see http://ibm.biz/ibmi-rpms)
 
-You may try pre-compiled test version db2util at Yips link (V7r1+).
-
-* http://yips.idevcloud.com/wiki/index.php/Databases/DB2Util
+```
+yum install db2util
+```
 
 # Run
 
@@ -112,11 +108,11 @@ bash-4.3$ db2util "DSPLIBL" -xc
 </sh>
 </xmlservice>"
 ```
+# Contributing
+Please read the [contribution guidelines](CONTRIBUTING.md).
 
 # Contributors
-- Tony Cairns, IBM
-- Jesse Gorzinski, IBM
-- Aaron Bartell, Krengel Technology, Inc. 
+See [contributors.txt](contributors.txt).
 
 
 # License
