@@ -1,6 +1,6 @@
 ### make
 CC                 = gcc
-INCLUDEPATH        = -I. -I/QOpenSys/pkgs/bin/include/cli
+INCLUDEPATH        = -I. -I/QOpenSys/pkgs/include/cli
 LIBDEPALL          = -L.  -liconv -ldl -lpthread -ldb400
 
 ###  shared lib
@@ -9,7 +9,6 @@ LIBDEPALL          = -L.  -liconv -ldl -lpthread -ldb400
 DB2UTILPGM      = db2util
 DB2UTILLIBOBJS  = db2util.o
 DB2UTILLIBDEPS  = $(LIBDEPALL)
-DB2UTILPGM64      = db2util_64
 DB2UTILLIBEXPS    = -Wl,-bE:db2util.exp
 CCFLAGS            = -g -maix64 -pthread
 
