@@ -1,8 +1,8 @@
-#------IMPORTANT WARNING -------
+# ------IMPORTANT WARNING -------
 This project is under construction.
 
 
-#db2util
+# db2util
 
 Welcome to the db2util project. Goal is PASE DB2 CLI command line interface driver (libdb400.a).
 
@@ -13,7 +13,7 @@ PHP team asked about use db2util as RPGCGI json (see Sources db2util/rpgcgi/READ
 Alan team asked about use db2util as FastCGI json (see Sources db2util/fastcgi/README.md).
 
 
-#Compile
+# Compile
 
 Assume Option 3 GCC pkg_perzl_gcc-4.8.3.lst.
 
@@ -26,13 +26,13 @@ gcc -g -I. -I/usr/include -I.. -c db2util.c
 gcc -g db2util.o -L. -lpthreads -liconv -ldl -lpthread -ldb400 -o db2util
 ```
 
-#Compiled version
+# Compiled version
 
 You may try pre-compiled test version db2util at Yips link (V7r1+).
 
 * http://yips.idevcloud.com/wiki/index.php/Databases/DB2Util
 
-#Run
+# Run
 
 Help:
 
@@ -113,10 +113,10 @@ bash-4.3$ db2util "DSPLIBL" -xc
 </xmlservice>"
 ```
 
-#Contributors
+# Contributors
 - Tony Cairns, IBM
 - Aaron Bartell, Krengel Technology, Inc.
 
-#License
+# License
 MIT
 
