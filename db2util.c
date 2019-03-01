@@ -44,18 +44,6 @@ int db2util_ccsid() {
   return ccsid;
 }
 
-void * db2util_new(int size) {
-  void * buffer = malloc(size + 1);
-  memset(buffer,0,size + 1);
-  return buffer;
-}
-
-void db2util_free(char *buffer) {
-  if (buffer) {
-    free(buffer);
-  }
-}
-
 void db2util_output_record_array_beg(int fmt) {
   switch (fmt) {
   case DB2UTIL_OUT_JSON:
@@ -274,7 +262,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   if (nResultCols > 0) {
     for (i = 0 ; i < nResultCols; i++) {
       size = DB2UTIL_EXPAND_COL_NAME;
-      buff_name[i] = db2util_new(size);
+      buff_name[i] = malloc(size);
       buff_value[i] = NULL;
       rc = SQLDescribeCol((SQLHSTMT)hstmt, (SQLSMALLINT)(i + 1), (SQLCHAR *)buff_name[i], size, &name_length, &type, &size, &scale, &nullable);
       if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
@@ -293,14 +281,14 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
       case SQL_VARGRAPHIC:
       case SQL_XML:
         size = size * DB2UTIL_EXPAND_CHAR;
-        buff_value[i] = db2util_new(size);
+        buff_value[i] = malloc(size);
         rc = SQLBindCol((SQLHSTMT)hstmt, (i + 1), SQL_CHAR, buff_value[i], size, &fStrLen);
         break;
       case SQL_BINARY:
       case SQL_VARBINARY:
       case SQL_BLOB:
         size = size * DB2UTIL_EXPAND_BINARY;
-        buff_value[i] = db2util_new(size);
+        buff_value[i] = malloc(size);
         rc = SQLBindCol((SQLHSTMT)hstmt, (i + 1), SQL_CHAR, buff_value[i], size, &fStrLen);
         break;
       case SQL_TYPE_DATE:
@@ -318,7 +306,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
       case SQL_NUMERIC:
       default:
         size = DB2UTIL_EXPAND_OTHER;
-        buff_value[i] = db2util_new(size);
+        buff_value[i] = malloc(size);
         rc = SQLBindCol((SQLHSTMT)hstmt, (i + 1), SQL_CHAR, buff_value[i], size, &fStrLen);
         break;
       }
@@ -345,11 +333,11 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
     db2util_output_record_array_end(fmt);
     for (i = 0 ; i < nResultCols; i++) {
       if (buff_value[i]) {
-        db2util_free(buff_name[i]);
+        free(buff_name[i]);
         buff_name[i] = NULL;
       }
       if (buff_name[i]) {
-        db2util_free(buff_name[i]);
+        free(buff_name[i]);
         buff_name[i] = NULL;
       }
     }
