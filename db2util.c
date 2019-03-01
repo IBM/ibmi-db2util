@@ -82,7 +82,7 @@ static inline void set_conn_attrs(SQLHDBC hdbc) {
   check_error(hdbc, SQL_HANDLE_DBC, rc);
 }
 
-int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
+static int db2util_query(char* stmt, int fmt, int argc, const char* argv[]) {
   SQLRETURN rc = 0;
   SQLHENV henv = 0;
   SQLHDBC hdbc = 0;
@@ -112,7 +112,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   check_error(hstmt, SQL_HANDLE_STMT, rc);
 
   /* prepare */
-  rc = SQLPrepare(hstmt, (SQLCHAR*)stmt_str, SQL_NTS);
+  rc = SQLPrepare(hstmt, (SQLCHAR*)stmt, SQL_NTS);
   check_error(hstmt, SQL_HANDLE_STMT, rc);
 
   /* number of input parms */
@@ -135,7 +135,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
     check_error(hstmt, SQL_HANDLE_STMT, rc);
 
     rc = SQLBindParameter(hstmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, type,
-                          precision, scale, argv[i], 0, &input_indicator);
+                          precision, scale, (SQLCHAR*) argv[i], 0, &input_indicator);
     check_error(hstmt, SQL_HANDLE_STMT, rc);
   }
 
