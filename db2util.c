@@ -5,9 +5,6 @@
 
 #include "db2util.h"
 
-#define DB2UTIL_VERSION "1.0.7 beta"
-
-#define DB2UTIL_MAX_ARGS 32
 
 enum {
   FORMAT_JSON,
