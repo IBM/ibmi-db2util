@@ -5,6 +5,9 @@
 
 #include "db2util.h"
 
+#include "format_json.h"
+#include "format_csv.h"
+#include "format_space.h"
 
 enum {
   FORMAT_JSON,
@@ -12,85 +15,11 @@ enum {
   FORMAT_SPACE
 };
 
-void db2util_output_record_array_beg(int fmt) {
-  switch (fmt) {
-  case FORMAT_JSON:
-    printf("{\"records\":[");
-    break;
-  case FORMAT_SPACE:
-    break;
-  case FORMAT_CSV:
-  default:
-    break;
-  }
-}
-void db2util_output_record_row_beg(int fmt, int flag) {
-  switch (fmt) {
-  case FORMAT_JSON:
-    if (flag) {
-      printf(",\n{");
-    } else {
-      printf("\n{");
-    }
-    break;
-  case FORMAT_SPACE:
-    break;
-  case FORMAT_CSV:
-  default:
-    break;
-  }
-}
-void db2util_output_record_name_value(int fmt, int flag, char *name, char *value) {
-  switch (fmt) {
-  case FORMAT_JSON:
-    if (flag) {
-      printf(",");
-    }
-    printf("\"%s\":\"%s\"",name,value);
-    break;
-  case FORMAT_SPACE:
-    if (flag) {
-      printf(" ");
-    }
-    printf("\"%s\"",value);
-    break;
-  case FORMAT_CSV:
-  default:
-    if (flag) {
-      printf(",");
-    }
-    printf("\"%s\"",value);
-    break;
-  }
-}
-void db2util_output_record_row_end(int fmt) {
-  switch (fmt) {
-  case FORMAT_JSON:
-    printf("}");
-    break;
-  case FORMAT_SPACE:
-    printf("\n");
-    break;
-  case FORMAT_CSV:
-  default:
-    printf("\n");
-    break;
-  }
-}
-void db2util_output_record_array_end(int fmt) {
-  switch (fmt) {
-  case FORMAT_JSON:
-    printf("\n]}\n");
-    break;
-  case FORMAT_SPACE:
-    printf("\n");
-    break;
-  case FORMAT_CSV:
-  default:
-    printf("\n");
-    break;
-  }
-}
+format_t* formats[] = {
+  &json_format,
+  &csv_format,
+  &space_format
+};
 
 /*
   check_error(henv, SQL_HANDLE_ENV,   rc);
@@ -279,23 +208,21 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
     check_error(hstmt, SQL_HANDLE_STMT, rc);
   }
 
-  db2util_output_record_array_beg(fmt);
+  format_t* format = formats[fmt];
 
-  int recs = 0;
+  void* state = format->new();
+  format->start_rows(stdout, state);
+
   while ((rc = SQLFetch(hstmt)) == SQL_SUCCESS) {
+    format->row(stdout, state, cols, column_count);
 
-    db2util_output_record_row_beg(fmt, recs);
-
-    for (int i = 0 ; i < column_count; i++) {
-      col_info_t* col = &cols[i];
-
-      db2util_output_record_name_value(fmt,i,col->name,col->buffer);
+    for (int i = 0; i < column_count; ++i) {
+      cols[i].ind = cols[i].buffer_length;
     }
-    db2util_output_record_row_end(fmt);
-
-    recs += 1;
   }
-  db2util_output_record_array_end(fmt);
+
+  format->end_rows(stdout, state);
+  format->free(state);
 
   for (int i = 0 ; i < column_count; i++) {
     free(cols[i].buffer);

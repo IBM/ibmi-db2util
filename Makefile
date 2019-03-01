@@ -14,8 +14,8 @@ all: db2util
 ### (note: .c.o compiles all c parts in OBJS list)
 .SUFFIXES: .o .c
 
-db2util: db2util.o
-	$(CC) -o $@ $(LDFLAGS) -o $@ $<
+db2util: db2util.o format_json.o format_csv.o format_space.o
+	$(CC) -o $@ $(LDFLAGS) -o $@ $^
 
 install: db2util
 	mkdir -p $(DESTDIR)$(BINDIR)
