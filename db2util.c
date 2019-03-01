@@ -126,13 +126,41 @@ static void check_error(SQLHANDLE handle, SQLSMALLINT hType, SQLRETURN rc)
   exit(1);
 }
 
+static inline void set_env_attrs(SQLHENV henv) {
+  SQLRETURN rc;
+  SQLINTEGER attr = SQL_TRUE;
+
+  rc = SQLSetEnvAttr(henv, SQL_ATTR_SERVER_MODE, &attr, 0);
+  check_error(henv, SQL_HANDLE_ENV, rc);
+
+  attr = SQL_FALSE;
+  rc = SQLSetEnvAttr(henv, SQL_ATTR_INCLUDE_NULL_IN_LEN, &attr, 0);
+  check_error(henv, SQL_HANDLE_ENV, rc);
+}
+
+static inline void set_conn_attrs(SQLHDBC hdbc) {
+  SQLRETURN rc;
+  SQLINTEGER attr = SQL_TRUE;
+
+  rc = SQLSetConnectAttr(hdbc, SQL_ATTR_DBC_SYS_NAMING, &attr, 0);
+  check_error(hdbc, SQL_HANDLE_DBC, rc);
+
+  rc = SQLSetConnectAttr(hdbc, SQL_ATTR_NULLT_ARRAY_RESULTS, &attr, 0);
+  check_error(hdbc, SQL_HANDLE_DBC, rc);
+
+  rc = SQLSetConnectAttr(hdbc, SQL_ATTR_NULLT_OUTPUT_PARMS, &attr, 0);
+  check_error(hdbc, SQL_HANDLE_DBC, rc);
+
+  attr = SQL_TXN_NO_COMMIT;
+  rc = SQLSetConnectAttr(hdbc, SQL_ATTR_TXN_ISOLATION, &attr, 0);
+  check_error(hdbc, SQL_HANDLE_DBC, rc);
+}
+
 int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   SQLRETURN rc = 0;
   SQLHENV henv = 0;
   SQLHDBC hdbc = 0;
   SQLHSTMT hstmt = 0;
-  SQLINTEGER attr = SQL_TRUE;
-  SQLINTEGER attr_isolation = SQL_TXN_NO_COMMIT;
   SQLSMALLINT param_count = 0;
   SQLSMALLINT column_count = 0;
 
@@ -141,8 +169,8 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
 
   /* env */
   rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &henv);
-  rc = SQLSetEnvAttr(henv, SQL_ATTR_SERVER_MODE, &attr, 0);
-  rc = SQLSetEnvAttr(henv, SQL_ATTR_INCLUDE_NULL_IN_LEN, &attr, 0);
+  check_error(henv, SQL_HANDLE_ENV, rc);
+  set_env_attrs(henv);
 
   /* connect */
   rc = SQLAllocHandle(SQL_HANDLE_DBC, henv, &hdbc);
@@ -150,12 +178,8 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   
   rc = SQLConnect(hdbc, NULL, 0, NULL, 0, NULL, 0);
   check_error(hdbc, SQL_HANDLE_DBC, rc);
+  set_conn_attrs(hdbc);
 
-  rc = SQLSetConnectAttr(hdbc, SQL_ATTR_DBC_SYS_NAMING, &attr, 0);
-  check_error(hdbc, SQL_HANDLE_DBC, rc);
-
-  rc = SQLSetConnectAttr(hdbc, SQL_ATTR_TXN_ISOLATION, &attr_isolation, 0);
-  check_error(hdbc, SQL_HANDLE_DBC, rc);
 
   /* statement */
   rc = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
