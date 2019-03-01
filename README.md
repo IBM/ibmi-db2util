@@ -1,121 +1,114 @@
-# ------IMPORTANT WARNING -------
-This project is (and possibly always will be) under construction. It is released as a stable version 1.0.0. Future major releases may break compatibility. 
+# IBM i db2util
 
+## :rotating_light: ------ IMPORTANT WARNING ------- :rotating_light:
 
-# db2util
+This project is (and possibly always will be) under construction. It is released as a stable version 1.0.0. Future major releases may break compatibility.
 
-Welcome to the db2util project. Goal is PASE DB2 CLI command line interface driver (libdb400.a).
+## About
 
-Aaron asked about PASE db2 utility similar to the one in ILE (qsh -> db2).
+Welcome to the db2util project. This project includes a `db2util` command which is similar to the `db2` command provided by `QSH` on IBM i, but runs from PASE and interfaces through libdb400.a.
 
-PHP team asked about use db2util as RPGCGI json (see Sources db2util/rpgcgi/README.md).
+## Building
 
-Alan team asked about use db2util as FastCGI json (see Sources db2util/fastcgi/README.md).
+This project uses a very simple Makefile with no configuration step:
 
-
-# Compile
-
-Typical commands can be used to make and install this project
-```
+```sh
 make
 make install
 ```
 
-# Compiled version
-You can install the pre-compiled version on IBM i with the yum package manager (for more information see http://ibm.biz/ibmi-rpms)
+The project can be configured using the following Makefile variables:
 
+- `PREFIX` - the install prefix, default: `/QOpenSys/pkgs`
+- `BINDIR` - the install path for binaries, default `/QOpenSys/pkgs/bin`
+- `CC` - the compiler, default: `gcc`
+- `CPPFLAGS` - the C pre-processor flags, eg. `-I`, `-D`, ...
+- `CFLAGS` - the C compiler flags
+- `LDFLAGS` - the linker flags
+- `DESTDIR` - set the install destination prefix, useful for installing in to a temporary directory for packaging
+
+## Build Dependencies
+
+In order to build you will need:
+
+- GNU make
+- GCC
+- PASE CLI headers
+
+You can use the following command to install them:
+
+```sh
+yum install gcc make-gnu sqlcli-devel
 ```
+
+## Compiled version
+
+A pre-compiled version is available from the IBM i yum repository:
+
+```sh
 yum install db2util
 ```
 
-# Run
+**NOTE: See [here](http://ibm.biz/ibmi-rpms) for more information on getting `yum` installed on your IBM i system.**
 
-Help:
+## Usage
 
-```
-bash-4.3$ db2util -h
-Syntax: db2util 'sql statement' [-h -xc [xmlservice lib] -o [json|comma|space] -p parm1 parm2 ...]
--h      help
--xc      sql statement is xmlservice command
--o [json|comma|space]
- json  - {"records":[{"name"}:{"value"},{"name"}:{"value"},...]}
- comma - "value","value",...
- space - "value" "value" ...
--p parm1 parm2 ...
-Version: 1.0.6 beta
+### Comma delimter output (default or with `-o csv`)
 
-Example (DB2)
+```sh
 db2util "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'"
-db2util "select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?" -p Jones Vine -o json
-db2util "select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?" -p Jones Vine -o space
-
-Example (XMLSERVICE):
-db2util "DSPLIBL" -xc
-db2util "DSPLIBL" -xc qxmlserv
-db2util "DSPLIBL" -xc xmlservice
-db2util "DSPLIBL" -xc zendsvr6
+"839283","Jones   ","B D","21B NW 135 St","Clay  ","NY","13041","400","1","100.00","0.00"
+"392859","Vine    ","S S","PO Box 79    ","Broton","VT","5046","700","1","439.00","0.00"
 ```
 
-Comma delimter output (default or -o comma):
+### JSON output `(-o json`)
 
-```
-bash-4.3$ db2util "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'"
-"839283","Jones   ","B D","21B NW 135 St","Clay  ","NY","13041","400","1","100.00",".00"
-"392859","Vine    ","S S","PO Box 79    ","Broton","VT","5046","700","1","439.00",".00"
-"392859","Vine    ","S S","PO Box 79    ","Broton","VT","5046","700","1","439.00",".00"
-```
-
-JSON output (-o json):
-
-```
-bash-4.3$ db2util "select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?" -p Jones Vine -o json 
-{"records":[
-{"CUSNUM":"839283","LSTNAM":"Jones   ","INIT":"B D","STREET":"21B NW 135 St","CITY":"Clay  ","STATE":"NY","ZIPCOD":"13041","CDTLMT":"400","CHGCOD":"1","BALDUE":"100.00","CDTDUE":".00"},
-{"CUSNUM":"392859","LSTNAM":"Vine    ","INIT":"S S","STREET":"PO Box 79    ","CITY":"Broton","STATE":"VT","ZIPCOD":"5046","CDTLMT":"700","CHGCOD":"1","BALDUE":"439.00","CDTDUE":".00"},
-{"CUSNUM":"392859","LSTNAM":"Vine    ","INIT":"S S","STREET":"PO Box 79    ","CITY":"Broton","STATE":"VT","ZIPCOD":"5046","CDTLMT":"700","CHGCOD":"1","BALDUE":"439.00","CDTDUE":".00"}
-]}
+```sh
+db2util -o json "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'"
+[
+{"CUSNUM":839283,"LSTNAM":"Jones   ","INIT":"B D","STREET":"21B NW 135 St","CITY":"Clay  ","STATE":"NY","ZIPCOD":13041,"CDTLMT":400,"CHGCOD":1,"BALDUE":100.00,"CDTDUE":0.00},
+{"CUSNUM":392859,"LSTNAM":"Vine    ","INIT":"S S","STREET":"PO Box 79    ","CITY":"Broton","STATE":"VT","ZIPCOD":5046,"CDTLMT":700,"CHGCOD":1,"BALDUE":439.00,"CDTDUE":0.00}
+]
 ```
 
-Space delimter output (-o space)
+### Space delimter output (`-o space`)
 
-```
-bash-4.3$ db2util "select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?" -p Jones Vine -o space
-"839283" "Jones   " "B D" "21B NW 135 St" "Clay  " "NY" "13041" "400" "1" "100.00" ".00"
-"392859" "Vine    " "S S" "PO Box 79    " "Broton" "VT" "5046" "700" "1" "439.00" ".00"
-"392859" "Vine    " "S S" "PO Box 79    " "Broton" "VT" "5046" "700" "1" "439.00" ".00"
+```sh
+db2util -o space "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'"
+"839283" "Jones   " "B D" "21B NW 135 St" "Clay  " "NY" "13041" "400" "1" "100.00" "0.00"
+"392859" "Vine    " "S S" "PO Box 79    " "Broton" "VT" "5046" "700" "1" "439.00" "0.00"
 ```
 
-call XMLSERVICE (cmd):
+### Help
 
+```sh
+db2util -h
+db2util [options] <sql statement>
+Options:
+  -o <fmt>                   Output format. Value values for fmt:
+                               json:  [{"name"}:{"value"},{"name"}:{"value"},...]
+                               csv:   "value","value",...
+                               space: "value" "value" ...
+  -p <parm>                  Input parameter(s) (max 32)
+  -h                         This help text
+  -v                         Show version number and quit
+
+Examples:
+db2util "select * from QIWS.QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'"
+db2util -p Jones -p Vine -o json "select * from QIWS.QCUSTCDT where LSTNAM=? or LSTNAM=?"
+db2util -p Jones -p Vine -o space "select * from QIWS.QCUSTCDT where LSTNAM=? or LSTNAM=?"
 ```
-bash-4.3$ db2util "DSPLIBL" -xc
-"<?xml version='1.0'?>
-<xmlservice>
-<sh>
- 5770SS1 V7R1M0  100423                    Library List                                          8/18/16 15:48:38        Page    1
-                          ASP
-   Library     Type       Device      Text Description
-   QSYS        SYS                    System Library
-   QSYS2       SYS                    System Library for CPI's
-   QHLPSYS     SYS
-   QUSRSYS     SYS                    System Library for Users
-   QGPL        USR                    General Purpose Library
-   QTEMP       USR
-   QDEVELOP    USR
-   QBLDSYS     USR
-   QBLDSYSR    USR
-                          * * * * *  E N D  O F  L I S T I N G  * * * * *
-</sh>
-</xmlservice>"
-```
-# Contributing
+
+## Contributing
+
 Please read the [contribution guidelines](CONTRIBUTING.md).
 
-# Contributors
+## Contributors
+
 See [contributors.txt](contributors.txt).
 
+## License
 
-# License
-MIT
+[MIT](LICENSE)
 
-(This project has been migrated from http://bitbucket.org/litmis/db2util)
+(This project has been migrated from [http://bitbucket.org/litmis/db2util](http://bitbucket.org/litmis/db2util))
