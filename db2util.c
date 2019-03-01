@@ -28,15 +28,9 @@
 #define DB2UTIL_OUT_JSON 12
 #define DB2UTIL_OUT_SPACE 13
 
-#define DB2UTIL_XMLSERVICE_CMD 15
-static char * db2util_xmlservice_lib = "qxmlserv";
-static char * db2util_xmlservice_ipc = "*na";
-static char * db2util_xmlservice_ctl = "*here";
-
 #define DB2UTIL_ARG_INPUT 20
 
 static char * db2util_name = "db2util";
-static char * db2util_out_set_xc = "-xc";
 static char * db2util_out_set_p = "-p";
 static char * db2util_out_set_o = "-o";
 
@@ -368,9 +362,8 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
 }
 
 void db2util_help(int fmt) {
-  printf("Syntax: db2util 'sql statement' [-h -xc [xmlservice lib] -o [json|comma|space] -p parm1 parm2 ...]\n");
+  printf("Syntax: db2util 'sql statement' [-h -o [json|comma|space] -p parm1 parm2 ...]\n");
   printf("-h      help\n");
-  printf("-xc      sql statement is xmlservice command\n");
   printf("-o [json|comma|space]\n");
   printf(" json  - {\"records\":[{\"name\"}:{\"value\"},{\"name\"}:{\"value\"},...]}\n");
   printf(" comma - \"value\",\"value\",...\n");
@@ -381,19 +374,12 @@ void db2util_help(int fmt) {
   printf("db2util \"select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'\"\n");
   printf("db2util \"select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?\" -p Jones Vine -o json\n");
   printf("db2util \"select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?\" -p Jones Vine -o space\n");
-  printf("\nExample (XMLSERVICE):\n");
-  printf("db2util \"DSPLIBL\" -xc\n");
-  printf("db2util \"DSPLIBL\" -xc qxmlserv\n");
-  printf("db2util \"DSPLIBL\" -xc xmlservice\n");
-  printf("db2util \"DSPLIBL\" -xc zendsvr6\n");
 }
 
 int db2util_hash_key(char * str) {
   int key = DB2UTIL_UNKNOWN;
   if (strcmp(str,"-h") == 0) {
     key = DB2UTIL_CMD_HELP;
-  } else if (strcmp(str,"-xc") == 0) {
-    key = DB2UTIL_XMLSERVICE_CMD;
   } else if (strcmp(str,"-o") == 0) {
     key = DB2UTIL_OUT_FORMAT;
   } else if (strcmp(str,"json") == 0) {
@@ -420,8 +406,6 @@ int main(int argc, char *argv[]) {
   int test = DB2UTIL_UNKNOWN;
   int test2 = DB2UTIL_UNKNOWN;
   char buffer[4096];
-  char * xmlservice_lib  = NULL;
-  char query_xmlservice[4096];
   /* clear parm markers */
   for (i=0; i < DB2UTIL_MAX_ARGS; i++) {
     iargv[i] = NULL;
@@ -457,39 +441,6 @@ int main(int argc, char *argv[]) {
           break;
         }
       }
-      break;
-    /* -xc */
-    case DB2UTIL_XMLSERVICE_CMD:
-      /* -xc [xmlservice library] */
-      xmlservice_lib  = db2util_xmlservice_lib;
-      if (i + 1 < argc) {
-        test2 = db2util_hash_key(argv[i + 1]);
-        if (test2 == DB2UTIL_UNKNOWN) {
-          xmlservice_lib = argv[i + 1];
-          i++;
-        }
-      }
-      memset(buffer,0,sizeof(buffer));
-      strcat(buffer,"<?xml version='1.0'?>\n");
-      strcat(buffer,"<xmlservice>\n");
-      strcat(buffer,"<sh>system -i \"");
-      strcat(buffer,query);
-      strcat(buffer,"\"</sh>\n");
-      strcat(buffer,"</xmlservice>");
-      /* "call [qxmlserv].iplugr512k(?, ?, ?)" */
-      memset(query_xmlservice,0,sizeof(query_xmlservice));
-      strcat(query_xmlservice,"call ");
-      strcat(query_xmlservice,xmlservice_lib);
-      strcat(query_xmlservice,".iplugr512k(?, ?, ?)");
-      query = query_xmlservice;
-      iargc = 0;
-      iargv[iargc] = db2util_xmlservice_ipc;
-      iargc += 1;
-      iargv[iargc] = db2util_xmlservice_ctl;
-      iargc += 1;
-      iargv[iargc] = (char *)&buffer;
-      iargc += 1;
-      iargv[iargc] = NULL;
       break;
     /* -h */
     case DB2UTIL_CMD_HELP:
