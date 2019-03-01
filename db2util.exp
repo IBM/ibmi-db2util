@@ -1,4 +1,0 @@
-#!db2util
-
-db2util_query_json
-
