@@ -160,6 +160,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
     rc = SQLDescribeCol(hstmt, i+1, col->name, sizeof(col->name), &ignore, &col->type, &size, &ignore, &ignore);
     check_error(hstmt, SQL_HANDLE_STMT, rc);
 
+    size_t bind_length;
     switch (col->type) {
     case SQL_CHAR:
     case SQL_VARCHAR:
@@ -171,8 +172,9 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
     case SQL_GRAPHIC:
     case SQL_VARGRAPHIC:
     case SQL_XML:
+    default:
       col->bind_type = SQL_C_CHAR;
-      col->buffer_length = size * 3;
+      col->buffer_length = bind_length = size * 3;
       col->buffer = col->data = malloc(col->buffer_length);
       break;
 
@@ -180,8 +182,21 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
     case SQL_VARBINARY:
     case SQL_BLOB:
       col->bind_type = SQL_C_CHAR;
-      col->buffer_length = size * 3;
+      col->buffer_length = bind_length = size * 3;
       col->buffer = col->data = malloc(col->buffer_length);
+      break;
+
+    case SQL_DECFLOAT:
+    case SQL_REAL:
+    case SQL_FLOAT:
+    case SQL_DOUBLE:
+    case SQL_DECIMAL:
+    case SQL_NUMERIC:
+      col->bind_type = SQL_C_CHAR;
+      col->buffer_length = 100;
+      col->buffer = malloc(col->buffer_length);
+      col->data = col->buffer + 1;
+      bind_length = col->buffer_length - 1;
       break;
 
     case SQL_TYPE_DATE:
@@ -189,22 +204,15 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
     case SQL_TYPE_TIMESTAMP:
     case SQL_DATETIME:
     case SQL_BIGINT:
-    case SQL_DECFLOAT:
     case SQL_SMALLINT:
     case SQL_INTEGER:
-    case SQL_REAL:
-    case SQL_FLOAT:
-    case SQL_DOUBLE:
-    case SQL_DECIMAL:
-    case SQL_NUMERIC:
-    default:
       col->bind_type = SQL_C_CHAR;
-      col->buffer_length = 100;
+      col->buffer_length = bind_length = 100;
       col->buffer = col->data = malloc(col->buffer_length);
       break;
     }
 
-    rc = SQLBindCol(hstmt, i+1, col->bind_type, col->buffer, col->buffer_length, &col->ind);
+    rc = SQLBindCol(hstmt, i+1, col->bind_type, col->data, bind_length, &col->ind);
     check_error(hstmt, SQL_HANDLE_STMT, rc);
   }
 
@@ -214,6 +222,39 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   format->start_rows(stdout, state);
 
   while ((rc = SQLFetch(hstmt)) == SQL_SUCCESS) {
+    for (int i = 0; i < column_count; ++i) {
+      col_info_t* col = cols + i;
+
+      switch(col->type) {
+      case SQL_DECIMAL:
+      case SQL_NUMERIC:
+      case SQL_DECFLOAT:
+      case SQL_REAL:
+      case SQL_FLOAT:
+      case SQL_DOUBLE:
+        if (col->ind == SQL_NULL_DATA) break;
+        if (col->buffer[1] == '.') {
+          col->buffer[0] = '0';
+          col->buffer[1] = '.';
+          col->data = col->buffer;
+          col->ind++;
+        }
+        else if (col->buffer[1] == '-' && col->buffer[2] == '.') {
+          col->buffer[0] = '-';
+          col->buffer[1] = '0';
+          col->data = col->buffer;
+          col->ind++;
+        }
+        else {
+          col->data = col->buffer + 1;
+        }
+        break;
+
+      default:
+        break;
+      }
+    }
+
     format->row(stdout, state, cols, column_count);
 
     for (int i = 0; i < column_count; ++i) {
