@@ -277,18 +277,25 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   return rc;
 }
 
-void db2util_help() {
-  printf("Syntax: db2util [-h -o [json|comma|space] -p parm1 -p parm2 ...] 'sql statement'\n");
-  printf("-h      help\n");
-  printf("-o [json|comma|space]\n");
-  printf(" json  - {\"records\":[{\"name\"}:{\"value\"},{\"name\"}:{\"value\"},...]}\n");
-  printf(" comma - \"value\",\"value\",...\n");
-  printf(" space - \"value\" \"value\" ...\n");
-  printf("-p parm1 \n");
-  printf("\nExample (DB2)\n");
-  printf("db2util \"select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'\"\n");
-  printf("db2util \"select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?\" -p Jones Vine -o json\n");
-  printf("db2util \"select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?\" -p Jones Vine -o space\n");
+#define STR(s) #s
+#define XSTR(s) STR(s)
+
+static void exit_with_usage(const char* program, int rc) {
+  printf("%s [options] <sql statement>\n", program);
+  printf("Options:\n");
+  printf("  -o <fmt>                   Output format. Value values for fmt:\n");
+  printf("                               json:  [{\"name\"}:{\"value\"},{\"name\"}:{\"value\"},...]\n");
+  printf("                               csv:   \"value\",\"value\",...\n");
+  printf("                               space: \"value\" \"value\" ...\n");
+  printf("  -p <parm>                  Input parameter(s) (max " XSTR(DB2UTIL_MAX_ARGS) ")\n");
+  printf("  -h                         This help text\n");
+  printf("  -v                         Show version number and quit\n");
+  printf("\nExamples:\n");
+  printf("%s \"select * from QIWS.QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'\"\n", program);
+  printf("%s -p Jones -p Vine -o json \"select * from QIWS.QCUSTCDT where LSTNAM=? or LSTNAM=?\"\n", program);
+  printf("%s -p Jones -p Vine -o space \"select * from QIWS.QCUSTCDT where LSTNAM=? or LSTNAM=?\"\n", program);
+
+  exit(rc);
 }
 
 int main(int argc, char* const* argv) {
@@ -300,8 +307,7 @@ int main(int argc, char* const* argv) {
   while ((opt = getopt(argc, argv, "hvo:p:")) != -1) {
     switch(opt) {
     case 'h':
-      db2util_help();
-      return 0;
+      exit_with_usage(argv[0], 0);
 
     case 'v':
       printf("db2util " DB2UTIL_VERSION "\n");
@@ -319,8 +325,7 @@ int main(int argc, char* const* argv) {
         format = FORMAT_SPACE;
       }
       else {
-        db2util_help();
-        return 1;
+        exit_with_usage(argv[0], 1);
       }
       break;
 
@@ -335,14 +340,12 @@ int main(int argc, char* const* argv) {
 
     case '?':
     case ':':
-      db2util_help();
-      return 1;
+      exit_with_usage(argv[0], 1);
     }
   }
 
   if (argc - optind != 1) {
-    db2util_help();
-    return 1;
+    exit_with_usage(argv[0], 1);
   }
 
   db2util_query(argv[optind], format, parm_count, parms);
