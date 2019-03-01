@@ -7,8 +7,6 @@
 
 #define DB2UTIL_VERSION "1.0.7 beta"
 
-#define SQL_IS_INTEGER 0
-
 #define DB2UTIL_MAX_ARGS 32
 #define DB2UTIL_MAX_COLS 1024
 #define DB2UTIL_MAX_ERR_MSG_LEN (SQL_MAX_MESSAGE_LENGTH + SQL_SQLSTATE_SIZE + 10)
@@ -182,8 +180,8 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
 
   /* env */
   rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &henv);
-  rc = SQLSetEnvAttr(henv, SQL_ATTR_SERVER_MODE, &attr, SQL_IS_INTEGER);
-  rc = SQLSetEnvAttr(henv, SQL_ATTR_INCLUDE_NULL_IN_LEN, &attr, SQL_IS_INTEGER);
+  rc = SQLSetEnvAttr(henv, SQL_ATTR_SERVER_MODE, &attr, 0);
+  rc = SQLSetEnvAttr(henv, SQL_ATTR_INCLUDE_NULL_IN_LEN, &attr, 0);
 
   /* connect */
   rc = SQLAllocHandle(SQL_HANDLE_DBC, henv, &hdbc);
@@ -194,11 +192,11 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC, rc) == SQL_ERROR) {
     return SQL_ERROR;
   }
-  rc = SQLSetConnectAttr(hdbc, SQL_ATTR_DBC_SYS_NAMING, &attr, SQL_IS_INTEGER);
+  rc = SQLSetConnectAttr(hdbc, SQL_ATTR_DBC_SYS_NAMING, &attr, 0);
   if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC, rc) == SQL_ERROR) {
     return SQL_ERROR;
   }
-  rc = SQLSetConnectAttr(hdbc, SQL_ATTR_TXN_ISOLATION, &attr_isolation, SQL_IS_INTEGER);
+  rc = SQLSetConnectAttr(hdbc, SQL_ATTR_TXN_ISOLATION, &attr_isolation, 0);
   if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC, rc) == SQL_ERROR) {
     return SQL_ERROR;
   }
