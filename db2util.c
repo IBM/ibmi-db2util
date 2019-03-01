@@ -103,31 +103,34 @@ void db2util_output_record_array_end(int fmt) {
 }
 
 /*
-  db2util_check_sql_errors(fmt, henv, SQL_HANDLE_ENV,   rc);
-  db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC,   rc);
-  db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc);
+  check_error(henv, SQL_HANDLE_ENV,   rc);
+  check_error(hdbc, SQL_HANDLE_DBC,   rc);
+  check_error(hstmt, SQL_HANDLE_STMT, rc);
 */
-int db2util_check_sql_errors(int fmt, SQLHANDLE handle, SQLSMALLINT hType, int rc)
+static void check_error(SQLHANDLE handle, SQLSMALLINT hType, SQLRETURN rc)
 {
   SQLCHAR msg[SQL_MAX_MESSAGE_LENGTH + 1];
-  SQLCHAR sqlstate[SQL_SQLSTATE_SIZE + 1];
-  SQLCHAR errMsg[DB2UTIL_MAX_ERR_MSG_LEN];
+  SQLCHAR sqlstate[SQL_SQLSTATE_SIZE+1];
   SQLINTEGER sqlcode = 0;
   SQLSMALLINT length = 0;
-  SQLCHAR *p = NULL;
-  SQLSMALLINT recno = 1;
-  if (rc == SQL_ERROR) {
-    memset(msg, '\0', SQL_MAX_MESSAGE_LENGTH + 1);
-    memset(sqlstate, '\0', SQL_SQLSTATE_SIZE + 1);
-    memset(errMsg, '\0', DB2UTIL_MAX_ERR_MSG_LEN);
-    if ( SQLGetDiagRec(hType, handle, recno, sqlstate, &sqlcode, msg, SQL_MAX_MESSAGE_LENGTH + 1, &length)  == SQL_SUCCESS ) {
-      if (msg[length-1] == '\n') {
-        p = &msg[length-1];
-        *p = '\0';
-      }
-    }
+
+  if (rc != SQL_ERROR) return;
+
+  memset(msg, '\0', sizeof(msg));
+  memset(sqlstate, '\0', sizeof(sqlstate));
+
+  if ( SQLGetDiagRec(hType, handle, 1, sqlstate, &sqlcode, msg, sizeof(msg), &length) != SQL_SUCCESS ) {
+    fprintf(stderr, "Critical error: couldn't retrieve error info\n");
+    exit(1);
   }
-  return SQL_SUCCESS;
+
+  char* p;
+  while ((p = strchr(msg, '\n'))) {
+    *p = '\0';
+  }
+  
+  fprintf(stderr, "%s SQLSTATE=%s SQLCODE=%d\n", msg, sqlstate, (int)sqlcode);
+  exit(1);
 }
 
 int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
@@ -174,71 +177,59 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
 
   /* connect */
   rc = SQLAllocHandle(SQL_HANDLE_DBC, henv, &hdbc);
-  if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC,   rc) == SQL_ERROR) {
-    return SQL_ERROR;
-  }
+  check_error(hdbc, SQL_HANDLE_DBC, rc);
+  
   rc = SQLConnect(hdbc, NULL, 0, NULL, 0, NULL, 0);
-  if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC, rc) == SQL_ERROR) {
-    return SQL_ERROR;
-  }
+  check_error(hdbc, SQL_HANDLE_DBC, rc);
+
   rc = SQLSetConnectAttr(hdbc, SQL_ATTR_DBC_SYS_NAMING, &attr, 0);
-  if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC, rc) == SQL_ERROR) {
-    return SQL_ERROR;
-  }
+  check_error(hdbc, SQL_HANDLE_DBC, rc);
+
   rc = SQLSetConnectAttr(hdbc, SQL_ATTR_TXN_ISOLATION, &attr_isolation, 0);
-  if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC, rc) == SQL_ERROR) {
-    return SQL_ERROR;
-  }
+  check_error(hdbc, SQL_HANDLE_DBC, rc);
+
   /* statement */
   rc = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
-  if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
-    return SQL_ERROR;
-  }
+  check_error(hstmt, SQL_HANDLE_STMT, rc);
+
   /* prepare */
   rc = SQLPrepare(hstmt, (SQLCHAR*)stmt_str, SQL_NTS);
-  if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
-    return SQL_ERROR;
-  }
+  check_error(hstmt, SQL_HANDLE_STMT, rc);
+
   /* number of input parms */
   rc = SQLNumParams(hstmt, &nParms);
-  if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
-    return SQL_ERROR;
-  }
+  check_error(hstmt, SQL_HANDLE_STMT, rc);
+
   if (nParms > 0) {
     for (i = 0; i < nParms; i++) {
       rc = SQLDescribeParam(hstmt, i+1, 
              &sql_data_type, &sql_precision, &sql_scale, &sql_nullable);
-      if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
-        return SQL_ERROR;
-      }
+      check_error(hstmt, SQL_HANDLE_STMT, rc);
+
       buff_len[i] = SQL_NTS;
       rc = SQLBindParameter(hstmt, i+1,
              SQL_PARAM_INPUT, SQL_CHAR, sql_data_type,
              sql_precision, sql_scale, argv[i], 0, &buff_len[i]);
-      if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
-        return SQL_ERROR;
-      }
+      check_error(hstmt, SQL_HANDLE_STMT, rc);
+
     }
   }
   /* execute */
   rc = SQLExecute(hstmt);
-  if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
-    return SQL_ERROR;
-  }
+  check_error(hstmt, SQL_HANDLE_STMT, rc);
+
   /* result set */
   rc = SQLNumResultCols(hstmt, &nResultCols);
-  if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
-    return SQL_ERROR;
-  }
+  check_error(hstmt, SQL_HANDLE_STMT, rc);
+
   if (nResultCols > 0) {
     for (i = 0 ; i < nResultCols; i++) {
       size = DB2UTIL_EXPAND_COL_NAME;
       buff_name[i] = malloc(size);
       buff_value[i] = NULL;
       rc = SQLDescribeCol(hstmt, i+1, buff_name[i], size, &name_length, &type, &size, &scale, &nullable);
-      if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
-        return SQL_ERROR;
-      }
+      check_error(hstmt, SQL_HANDLE_STMT, rc);
+
       /* dbcs expansion */
       switch (type) {
       case SQL_CHAR:
@@ -281,9 +272,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
         rc = SQLBindCol(hstmt, i+1, SQL_CHAR, buff_value[i], size, &fStrLen);
         break;
       }
-      if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
-        return SQL_ERROR;
-      }
+      check_error(hstmt, SQL_HANDLE_STMT, rc);
     }
     rc = SQL_SUCCESS;
     db2util_output_record_array_beg(fmt);
