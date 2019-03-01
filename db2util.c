@@ -134,7 +134,6 @@ static void check_error(SQLHANDLE handle, SQLSMALLINT hType, SQLRETURN rc)
 }
 
 int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
-  int i = 0;
   int recs = 0;
   int rc = 0;
   SQLHENV henv = 0;
@@ -162,7 +161,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   SQLSMALLINT sql_nullable = SQL_NO_NULLS;
 
   /* init */
-  for (i=0;i < DB2UTIL_MAX_COLS;i++) {
+  for (int i=0;i < DB2UTIL_MAX_COLS;i++) {
     buff_name[i] = NULL;
     buff_value[i] = NULL;
     buff_len[i] = 0;
@@ -201,7 +200,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   check_error(hstmt, SQL_HANDLE_STMT, rc);
 
   if (nParms > 0) {
-    for (i = 0; i < nParms; i++) {
+    for (int i = 0; i < nParms; i++) {
       rc = SQLDescribeParam(hstmt, i+1, 
              &sql_data_type, &sql_precision, &sql_scale, &sql_nullable);
       check_error(hstmt, SQL_HANDLE_STMT, rc);
@@ -223,7 +222,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   check_error(hstmt, SQL_HANDLE_STMT, rc);
 
   if (nResultCols > 0) {
-    for (i = 0 ; i < nResultCols; i++) {
+    for (int i = 0 ; i < nResultCols; i++) {
       size = DB2UTIL_EXPAND_COL_NAME;
       buff_name[i] = malloc(size);
       buff_value[i] = NULL;
@@ -283,7 +282,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
       }
       db2util_output_record_row_beg(fmt, recs);
       recs += 1;
-      for (i = 0 ; i < nResultCols; i++) {
+      for (int i = 0 ; i < nResultCols; i++) {
         if (buff_value[i]) {
           db2util_output_record_name_value(fmt,i,buff_name[i],buff_value[i]);
         }
@@ -291,7 +290,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
       db2util_output_record_row_end(fmt);
     }
     db2util_output_record_array_end(fmt);
-    for (i = 0 ; i < nResultCols; i++) {
+    for (int i = 0 ; i < nResultCols; i++) {
       if (buff_value[i]) {
         free(buff_name[i]);
         buff_name[i] = NULL;
