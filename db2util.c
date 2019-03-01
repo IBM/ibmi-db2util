@@ -35,15 +35,6 @@ static char * db2util_out_set_p = "-p";
 static char * db2util_out_set_o = "-o";
 
 
-int db2util_ccsid() {
-  char * env_ccsid = getenv("CCSID");
-  int ccsid = Qp2paseCCSID();
-  if (env_ccsid) {
-     ccsid = atoi(env_ccsid);
-  }
-  return ccsid;
-}
-
 void db2util_output_record_array_beg(int fmt) {
   switch (fmt) {
   case DB2UTIL_OUT_JSON:
@@ -156,7 +147,6 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   int i = 0;
   int recs = 0;
   int rc = 0;
-  int ccsid = db2util_ccsid();
   SQLHENV henv = 0;
   SQLHDBC hdbc = 0;
   SQLHSTMT hstmt = 0;
@@ -188,16 +178,13 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
     buff_len[i] = 0;
   }
 
-  /* ccsid */
-  rc = SQLOverrideCCSID400(ccsid);
+  SQLOverrideCCSID400(1208);
 
   /* env */
   rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &henv);
   rc = SQLSetEnvAttr(henv, SQL_ATTR_SERVER_MODE, &attr, SQL_IS_INTEGER);
   rc = SQLSetEnvAttr(henv, SQL_ATTR_INCLUDE_NULL_IN_LEN, &attr, SQL_IS_INTEGER);
-  if (ccsid == 1208) {
-    rc = SQLSetEnvAttr(henv, SQL_ATTR_UTF8, &attr, SQL_IS_INTEGER);
-  }
+
   /* connect */
   rc = SQLAllocHandle(SQL_HANDLE_DBC, henv, &hdbc);
   if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC,   rc) == SQL_ERROR) {
