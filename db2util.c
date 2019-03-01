@@ -285,7 +285,6 @@ void db2util_help() {
   printf(" comma - \"value\",\"value\",...\n");
   printf(" space - \"value\" \"value\" ...\n");
   printf("-p parm1 \n");
-  printf("Version: %s\n", DB2UTIL_VERSION);
   printf("\nExample (DB2)\n");
   printf("db2util \"select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'\"\n");
   printf("db2util \"select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?\" -p Jones Vine -o json\n");
@@ -298,10 +297,14 @@ int main(int argc, char* const* argv) {
   int format = FORMAT_CSV;
 
   int opt;
-  while ((opt = getopt(argc, argv, "ho:p:")) != -1) {
+  while ((opt = getopt(argc, argv, "hvo:p:")) != -1) {
     switch(opt) {
     case 'h':
       db2util_help();
+      return 0;
+
+    case 'v':
+      printf("db2util " DB2UTIL_VERSION "\n");
       return 0;
 
     case 'o':
