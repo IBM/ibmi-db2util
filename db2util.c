@@ -2,19 +2,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <as400_protos.h>
-#include <sqlcli1.h>
+
+#include "db2util.h"
 
 #define DB2UTIL_VERSION "1.0.7 beta"
 
 #define DB2UTIL_MAX_ARGS 32
-#define DB2UTIL_MAX_COLS 1024
-#define DB2UTIL_MAX_ERR_MSG_LEN (SQL_MAX_MESSAGE_LENGTH + SQL_SQLSTATE_SIZE + 10)
-
-#define DB2UTIL_EXPAND_CHAR 3
-#define DB2UTIL_EXPAND_BINARY 2
-#define DB2UTIL_EXPAND_OTHER 64
-#define DB2UTIL_EXPAND_COL_NAME 128
 
 enum {
   FORMAT_JSON,
@@ -134,38 +127,15 @@ static void check_error(SQLHANDLE handle, SQLSMALLINT hType, SQLRETURN rc)
 }
 
 int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
-  int recs = 0;
-  int rc = 0;
+  SQLRETURN rc = 0;
   SQLHENV henv = 0;
   SQLHDBC hdbc = 0;
   SQLHSTMT hstmt = 0;
   SQLINTEGER attr = SQL_TRUE;
   SQLINTEGER attr_isolation = SQL_TXN_NO_COMMIT;
-  SQLSMALLINT nParms = 0;
-  SQLSMALLINT nResultCols = 0;
-  SQLSMALLINT name_length = 0;
-  SQLCHAR *buff_name[DB2UTIL_MAX_COLS];
-  SQLCHAR *buff_value[DB2UTIL_MAX_COLS];
-  SQLINTEGER buff_len[DB2UTIL_MAX_COLS];
-  SQLSMALLINT type = 0;
-  SQLUINTEGER size = 0;
-  SQLSMALLINT scale = 0;
-  SQLSMALLINT nullable = 0;
-  SQLINTEGER lob_loc = 0;
-  SQLINTEGER loc_ind = 0;
-  SQLSMALLINT loc_type = 0;
-  SQLINTEGER fStrLen = SQL_NTS;
-  SQLSMALLINT sql_data_type = 0;
-  SQLUINTEGER sql_precision = 0;
-  SQLSMALLINT sql_scale = 0;
-  SQLSMALLINT sql_nullable = SQL_NO_NULLS;
+  SQLSMALLINT param_count = 0;
+  SQLSMALLINT column_count = 0;
 
-  /* init */
-  for (int i=0;i < DB2UTIL_MAX_COLS;i++) {
-    buff_name[i] = NULL;
-    buff_value[i] = NULL;
-    buff_len[i] = 0;
-  }
 
   SQLOverrideCCSID400(1208);
 
@@ -196,111 +166,121 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   check_error(hstmt, SQL_HANDLE_STMT, rc);
 
   /* number of input parms */
-  rc = SQLNumParams(hstmt, &nParms);
+  rc = SQLNumParams(hstmt, &param_count);
   check_error(hstmt, SQL_HANDLE_STMT, rc);
 
-  if (nParms > 0) {
-    for (int i = 0; i < nParms; i++) {
-      rc = SQLDescribeParam(hstmt, i+1, 
-             &sql_data_type, &sql_precision, &sql_scale, &sql_nullable);
-      check_error(hstmt, SQL_HANDLE_STMT, rc);
-
-      buff_len[i] = SQL_NTS;
-      rc = SQLBindParameter(hstmt, i+1,
-             SQL_PARAM_INPUT, SQL_CHAR, sql_data_type,
-             sql_precision, sql_scale, argv[i], 0, &buff_len[i]);
-      check_error(hstmt, SQL_HANDLE_STMT, rc);
-
-    }
+  if (param_count != argc) {
+    fprintf(stderr, "Invalid parameter count: expected %d got %d\n", param_count, argc);
+    exit(1);
   }
+  
+  SQLINTEGER input_indicator = SQL_NTS;
+  for (int i = 0; i < param_count; i++) {
+    SQLSMALLINT type;
+    SQLUINTEGER precision;
+    SQLSMALLINT scale;
+    SQLSMALLINT nullable;
+
+    rc = SQLDescribeParam(hstmt, i+1, &type, &precision, &scale, &nullable);
+    check_error(hstmt, SQL_HANDLE_STMT, rc);
+
+    rc = SQLBindParameter(hstmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, type,
+                          precision, scale, argv[i], 0, &input_indicator);
+    check_error(hstmt, SQL_HANDLE_STMT, rc);
+  }
+
   /* execute */
   rc = SQLExecute(hstmt);
   check_error(hstmt, SQL_HANDLE_STMT, rc);
 
   /* result set */
-  rc = SQLNumResultCols(hstmt, &nResultCols);
+  rc = SQLNumResultCols(hstmt, &column_count);
   check_error(hstmt, SQL_HANDLE_STMT, rc);
 
-  if (nResultCols > 0) {
-    for (int i = 0 ; i < nResultCols; i++) {
-      size = DB2UTIL_EXPAND_COL_NAME;
-      buff_name[i] = malloc(size);
-      buff_value[i] = NULL;
-      rc = SQLDescribeCol(hstmt, i+1, buff_name[i], size, &name_length, &type, &size, &scale, &nullable);
-      check_error(hstmt, SQL_HANDLE_STMT, rc);
+  if (column_count < 1) exit(0);
 
-      /* dbcs expansion */
-      switch (type) {
-      case SQL_CHAR:
-      case SQL_VARCHAR:
-      case SQL_CLOB:
-      case SQL_DBCLOB:
-      case SQL_UTF8_CHAR:
-      case SQL_WCHAR:
-      case SQL_WVARCHAR:
-      case SQL_GRAPHIC:
-      case SQL_VARGRAPHIC:
-      case SQL_XML:
-        size = size * DB2UTIL_EXPAND_CHAR;
-        buff_value[i] = malloc(size);
-        rc = SQLBindCol(hstmt, i+1, SQL_CHAR, buff_value[i], size, &fStrLen);
-        break;
-      case SQL_BINARY:
-      case SQL_VARBINARY:
-      case SQL_BLOB:
-        size = size * DB2UTIL_EXPAND_BINARY;
-        buff_value[i] = malloc(size);
-        rc = SQLBindCol(hstmt, i+1, SQL_CHAR, buff_value[i], size, &fStrLen);
-        break;
-      case SQL_TYPE_DATE:
-      case SQL_TYPE_TIME:
-      case SQL_TYPE_TIMESTAMP:
-      case SQL_DATETIME:
-      case SQL_BIGINT:
-      case SQL_DECFLOAT:
-      case SQL_SMALLINT:
-      case SQL_INTEGER:
-      case SQL_REAL:
-      case SQL_FLOAT:
-      case SQL_DOUBLE:
-      case SQL_DECIMAL:
-      case SQL_NUMERIC:
-      default:
-        size = DB2UTIL_EXPAND_OTHER;
-        buff_value[i] = malloc(size);
-        rc = SQLBindCol(hstmt, i+1, SQL_CHAR, buff_value[i], size, &fStrLen);
-        break;
-      }
-      check_error(hstmt, SQL_HANDLE_STMT, rc);
+  col_info_t* cols = malloc(sizeof(col_info_t) * column_count);
+ 
+  for (int i = 0 ; i < column_count; i++) {
+    col_info_t* col = &cols[i];
+
+    SQLUINTEGER size;
+    SQLSMALLINT ignore;
+
+    rc = SQLDescribeCol(hstmt, i+1, col->name, sizeof(col->name), &ignore, &col->type, &size, &ignore, &ignore);
+    check_error(hstmt, SQL_HANDLE_STMT, rc);
+
+    switch (col->type) {
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_CLOB:
+    case SQL_DBCLOB:
+    case SQL_UTF8_CHAR:
+    case SQL_WCHAR:
+    case SQL_WVARCHAR:
+    case SQL_GRAPHIC:
+    case SQL_VARGRAPHIC:
+    case SQL_XML:
+      col->bind_type = SQL_C_CHAR;
+      col->buffer_length = size * 3;
+      col->buffer = col->data = malloc(col->buffer_length);
+      break;
+
+    case SQL_BINARY:
+    case SQL_VARBINARY:
+    case SQL_BLOB:
+      col->bind_type = SQL_C_CHAR;
+      col->buffer_length = size * 3;
+      col->buffer = col->data = malloc(col->buffer_length);
+      break;
+
+    case SQL_TYPE_DATE:
+    case SQL_TYPE_TIME:
+    case SQL_TYPE_TIMESTAMP:
+    case SQL_DATETIME:
+    case SQL_BIGINT:
+    case SQL_DECFLOAT:
+    case SQL_SMALLINT:
+    case SQL_INTEGER:
+    case SQL_REAL:
+    case SQL_FLOAT:
+    case SQL_DOUBLE:
+    case SQL_DECIMAL:
+    case SQL_NUMERIC:
+    default:
+      col->bind_type = SQL_C_CHAR;
+      col->buffer_length = 100;
+      col->buffer = col->data = malloc(col->buffer_length);
+      break;
     }
-    rc = SQL_SUCCESS;
-    db2util_output_record_array_beg(fmt);
-    while (rc == SQL_SUCCESS) {
-      rc = SQLFetch(hstmt);
-      if (rc == SQL_NO_DATA_FOUND) {
-        break;
-      }
-      db2util_output_record_row_beg(fmt, recs);
-      recs += 1;
-      for (int i = 0 ; i < nResultCols; i++) {
-        if (buff_value[i]) {
-          db2util_output_record_name_value(fmt,i,buff_name[i],buff_value[i]);
-        }
-      }
-      db2util_output_record_row_end(fmt);
-    }
-    db2util_output_record_array_end(fmt);
-    for (int i = 0 ; i < nResultCols; i++) {
-      if (buff_value[i]) {
-        free(buff_name[i]);
-        buff_name[i] = NULL;
-      }
-      if (buff_name[i]) {
-        free(buff_name[i]);
-        buff_name[i] = NULL;
-      }
-    }
+
+    rc = SQLBindCol(hstmt, i+1, col->bind_type, col->buffer, col->buffer_length, &col->ind);
+    check_error(hstmt, SQL_HANDLE_STMT, rc);
   }
+
+  db2util_output_record_array_beg(fmt);
+
+  int recs = 0;
+  while ((rc = SQLFetch(hstmt)) == SQL_SUCCESS) {
+
+    db2util_output_record_row_beg(fmt, recs);
+
+    for (int i = 0 ; i < column_count; i++) {
+      col_info_t* col = &cols[i];
+
+      db2util_output_record_name_value(fmt,i,col->name,col->buffer);
+    }
+    db2util_output_record_row_end(fmt);
+
+    recs += 1;
+  }
+  db2util_output_record_array_end(fmt);
+
+  for (int i = 0 ; i < column_count; i++) {
+    free(cols[i].buffer);
+  }
+  free(cols);
+
   rc = SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
   rc = SQLDisconnect(hdbc);
   rc = SQLFreeHandle(SQL_HANDLE_DBC, hdbc);
