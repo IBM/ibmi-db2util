@@ -158,8 +158,8 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   int rc = 0;
   int ccsid = db2util_ccsid();
   SQLHENV henv = 0;
-  SQLHANDLE hdbc = 0;
-  SQLHANDLE hstmt = 0;
+  SQLHDBC hdbc = 0;
+  SQLHSTMT hstmt = 0;
   SQLINTEGER attr = SQL_TRUE;
   SQLINTEGER attr_isolation = SQL_TXN_NO_COMMIT;
   SQLSMALLINT nParms = 0;
@@ -193,55 +193,52 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
 
   /* env */
   rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &henv);
-  rc = SQLSetEnvAttr((SQLHENV)henv, SQL_ATTR_SERVER_MODE, (SQLPOINTER)&attr, SQL_IS_INTEGER);
-  rc = SQLSetEnvAttr((SQLHENV)henv, SQL_ATTR_INCLUDE_NULL_IN_LEN, (SQLPOINTER)&attr, SQL_IS_INTEGER);
+  rc = SQLSetEnvAttr(henv, SQL_ATTR_SERVER_MODE, &attr, SQL_IS_INTEGER);
+  rc = SQLSetEnvAttr(henv, SQL_ATTR_INCLUDE_NULL_IN_LEN, &attr, SQL_IS_INTEGER);
   if (ccsid == 1208) {
-    rc = SQLSetEnvAttr((SQLHENV)henv, SQL_ATTR_UTF8, (SQLPOINTER)&attr, SQL_IS_INTEGER);
+    rc = SQLSetEnvAttr(henv, SQL_ATTR_UTF8, &attr, SQL_IS_INTEGER);
   }
   /* connect */
-  rc = SQLAllocHandle( SQL_HANDLE_DBC, henv, &hdbc);
+  rc = SQLAllocHandle(SQL_HANDLE_DBC, henv, &hdbc);
   if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC,   rc) == SQL_ERROR) {
     return SQL_ERROR;
   }
-  rc = SQLConnect( (SQLHDBC)hdbc, 
-         (SQLCHAR *)NULL, (SQLSMALLINT)0,
-         (SQLCHAR *)NULL, (SQLSMALLINT)0,
-         (SQLCHAR *)NULL, (SQLSMALLINT)0);
+  rc = SQLConnect(hdbc, NULL, 0, NULL, 0, NULL, 0);
   if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC, rc) == SQL_ERROR) {
     return SQL_ERROR;
   }
-  rc = SQLSetConnectAttr((SQLHDBC)hdbc, SQL_ATTR_DBC_SYS_NAMING, (SQLPOINTER)&attr, SQL_IS_INTEGER);
+  rc = SQLSetConnectAttr(hdbc, SQL_ATTR_DBC_SYS_NAMING, &attr, SQL_IS_INTEGER);
   if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC, rc) == SQL_ERROR) {
     return SQL_ERROR;
   }
-  rc = SQLSetConnectAttr((SQLHDBC)hdbc, SQL_ATTR_TXN_ISOLATION, (SQLPOINTER)&attr_isolation, SQL_IS_INTEGER);
+  rc = SQLSetConnectAttr(hdbc, SQL_ATTR_TXN_ISOLATION, &attr_isolation, SQL_IS_INTEGER);
   if (db2util_check_sql_errors(fmt, hdbc, SQL_HANDLE_DBC, rc) == SQL_ERROR) {
     return SQL_ERROR;
   }
   /* statement */
-  rc = SQLAllocHandle(SQL_HANDLE_STMT, (SQLHDBC) hdbc, &hstmt);
+  rc = SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
   if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
     return SQL_ERROR;
   }
   /* prepare */
-  rc = SQLPrepare((SQLHSTMT)hstmt, (SQLCHAR*)stmt_str, (SQLINTEGER)SQL_NTS);
+  rc = SQLPrepare(hstmt, (SQLCHAR*)stmt_str, SQL_NTS);
   if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
     return SQL_ERROR;
   }
   /* number of input parms */
-  rc = SQLNumParams((SQLHSTMT)hstmt, (SQLSMALLINT*)&nParms);
+  rc = SQLNumParams(hstmt, &nParms);
   if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
     return SQL_ERROR;
   }
   if (nParms > 0) {
     for (i = 0; i < nParms; i++) {
-      rc = SQLDescribeParam((SQLHSTMT)hstmt, (SQLUSMALLINT)(i + 1), 
+      rc = SQLDescribeParam(hstmt, i+1, 
              &sql_data_type, &sql_precision, &sql_scale, &sql_nullable);
       if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
         return SQL_ERROR;
       }
       buff_len[i] = SQL_NTS;
-      rc = SQLBindParameter((SQLHSTMT)hstmt, (SQLUSMALLINT)(i + 1),
+      rc = SQLBindParameter(hstmt, i+1,
              SQL_PARAM_INPUT, SQL_CHAR, sql_data_type,
              sql_precision, sql_scale, argv[i], 0, &buff_len[i]);
       if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
@@ -250,12 +247,12 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
     }
   }
   /* execute */
-  rc = SQLExecute((SQLHSTMT)hstmt);
+  rc = SQLExecute(hstmt);
   if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
     return SQL_ERROR;
   }
   /* result set */
-  rc = SQLNumResultCols((SQLHSTMT)hstmt, &nResultCols);
+  rc = SQLNumResultCols(hstmt, &nResultCols);
   if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
     return SQL_ERROR;
   }
@@ -264,7 +261,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
       size = DB2UTIL_EXPAND_COL_NAME;
       buff_name[i] = malloc(size);
       buff_value[i] = NULL;
-      rc = SQLDescribeCol((SQLHSTMT)hstmt, (SQLSMALLINT)(i + 1), (SQLCHAR *)buff_name[i], size, &name_length, &type, &size, &scale, &nullable);
+      rc = SQLDescribeCol(hstmt, i+1, buff_name[i], size, &name_length, &type, &size, &scale, &nullable);
       if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
         return SQL_ERROR;
       }
@@ -282,14 +279,14 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
       case SQL_XML:
         size = size * DB2UTIL_EXPAND_CHAR;
         buff_value[i] = malloc(size);
-        rc = SQLBindCol((SQLHSTMT)hstmt, (i + 1), SQL_CHAR, buff_value[i], size, &fStrLen);
+        rc = SQLBindCol(hstmt, i+1, SQL_CHAR, buff_value[i], size, &fStrLen);
         break;
       case SQL_BINARY:
       case SQL_VARBINARY:
       case SQL_BLOB:
         size = size * DB2UTIL_EXPAND_BINARY;
         buff_value[i] = malloc(size);
-        rc = SQLBindCol((SQLHSTMT)hstmt, (i + 1), SQL_CHAR, buff_value[i], size, &fStrLen);
+        rc = SQLBindCol(hstmt, i+1, SQL_CHAR, buff_value[i], size, &fStrLen);
         break;
       case SQL_TYPE_DATE:
       case SQL_TYPE_TIME:
@@ -307,7 +304,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
       default:
         size = DB2UTIL_EXPAND_OTHER;
         buff_value[i] = malloc(size);
-        rc = SQLBindCol((SQLHSTMT)hstmt, (i + 1), SQL_CHAR, buff_value[i], size, &fStrLen);
+        rc = SQLBindCol(hstmt, i+1, SQL_CHAR, buff_value[i], size, &fStrLen);
         break;
       }
       if (db2util_check_sql_errors(fmt, hstmt, SQL_HANDLE_STMT, rc) == SQL_ERROR) {
@@ -343,7 +340,7 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
     }
   }
   rc = SQLFreeHandle(SQL_HANDLE_STMT, hstmt);
-  rc = SQLDisconnect((SQLHDBC)hdbc);
+  rc = SQLDisconnect(hdbc);
   rc = SQLFreeHandle(SQL_HANDLE_DBC, hdbc);
   /* SQLFreeHandle(SQL_HANDLE_ENV, henv); */
   return rc;
