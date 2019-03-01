@@ -22,60 +22,59 @@
 #define DB2UTIL_CMD_QUERY 2
 
 #define DB2UTIL_OUT_FORMAT 10
-#define DB2UTIL_OUT_COMMA 11
-#define DB2UTIL_OUT_JSON 12
-#define DB2UTIL_OUT_SPACE 13
+
 
 #define DB2UTIL_ARG_INPUT 20
 
-static char * db2util_name = "db2util";
-static char * db2util_out_set_p = "-p";
-static char * db2util_out_set_o = "-o";
-
+enum {
+  FORMAT_JSON,
+  FORMAT_CSV,
+  FORMAT_SPACE
+};
 
 void db2util_output_record_array_beg(int fmt) {
   switch (fmt) {
-  case DB2UTIL_OUT_JSON:
+  case FORMAT_JSON:
     printf("{\"records\":[");
     break;
-  case DB2UTIL_OUT_SPACE:
+  case FORMAT_SPACE:
     break;
-  case DB2UTIL_OUT_COMMA:
+  case FORMAT_CSV:
   default:
     break;
   }
 }
 void db2util_output_record_row_beg(int fmt, int flag) {
   switch (fmt) {
-  case DB2UTIL_OUT_JSON:
+  case FORMAT_JSON:
     if (flag) {
       printf(",\n{");
     } else {
       printf("\n{");
     }
     break;
-  case DB2UTIL_OUT_SPACE:
+  case FORMAT_SPACE:
     break;
-  case DB2UTIL_OUT_COMMA:
+  case FORMAT_CSV:
   default:
     break;
   }
 }
 void db2util_output_record_name_value(int fmt, int flag, char *name, char *value) {
   switch (fmt) {
-  case DB2UTIL_OUT_JSON:
+  case FORMAT_JSON:
     if (flag) {
       printf(",");
     }
     printf("\"%s\":\"%s\"",name,value);
     break;
-  case DB2UTIL_OUT_SPACE:
+  case FORMAT_SPACE:
     if (flag) {
       printf(" ");
     }
     printf("\"%s\"",value);
     break;
-  case DB2UTIL_OUT_COMMA:
+  case FORMAT_CSV:
   default:
     if (flag) {
       printf(",");
@@ -86,13 +85,13 @@ void db2util_output_record_name_value(int fmt, int flag, char *name, char *value
 }
 void db2util_output_record_row_end(int fmt) {
   switch (fmt) {
-  case DB2UTIL_OUT_JSON:
+  case FORMAT_JSON:
     printf("}");
     break;
-  case DB2UTIL_OUT_SPACE:
+  case FORMAT_SPACE:
     printf("\n");
     break;
-  case DB2UTIL_OUT_COMMA:
+  case FORMAT_CSV:
   default:
     printf("\n");
     break;
@@ -100,13 +99,13 @@ void db2util_output_record_row_end(int fmt) {
 }
 void db2util_output_record_array_end(int fmt) {
   switch (fmt) {
-  case DB2UTIL_OUT_JSON:
+  case FORMAT_JSON:
     printf("\n]}\n");
     break;
-  case DB2UTIL_OUT_SPACE:
+  case FORMAT_SPACE:
     printf("\n");
     break;
-  case DB2UTIL_OUT_COMMA:
+  case FORMAT_CSV:
   default:
     printf("\n");
     break;
@@ -353,11 +352,11 @@ int db2util_hash_key(char * str) {
   } else if (strcmp(str,"-o") == 0) {
     key = DB2UTIL_OUT_FORMAT;
   } else if (strcmp(str,"json") == 0) {
-    key = DB2UTIL_OUT_JSON;
+    key = FORMAT_JSON;
   } else if (strcmp(str,"comma") == 0) {
-    key = DB2UTIL_OUT_COMMA;
+    key = FORMAT_CSV;
   } else if (strcmp(str,"space") == 0) {
-    key = DB2UTIL_OUT_SPACE;
+    key = FORMAT_SPACE;
   } else if (strcmp(str,"-p") == 0) {
     key = DB2UTIL_ARG_INPUT;
   }
@@ -370,7 +369,7 @@ int main(int argc, char *argv[]) {
   int iargc = 0;
   char *iargv[DB2UTIL_MAX_ARGS];
   int command = DB2UTIL_CMD_HELP;
-  int fmt = DB2UTIL_OUT_COMMA;
+  int fmt = FORMAT_CSV;
   int have = DB2UTIL_UNKNOWN;
   char * query = NULL;
   int test = DB2UTIL_UNKNOWN;
@@ -401,9 +400,9 @@ int main(int argc, char *argv[]) {
       if (i + 1 < argc) {
         test2 = db2util_hash_key(argv[i+1]);
         switch (test2) {
-        case DB2UTIL_OUT_COMMA:
-        case DB2UTIL_OUT_JSON:
-        case DB2UTIL_OUT_SPACE:
+        case FORMAT_CSV:
+        case FORMAT_JSON:
+        case FORMAT_SPACE:
           fmt = test2;
           i += 1;
           break;
