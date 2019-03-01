@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <as400_protos.h>
 #include <sqlcli1.h>
 
 #define DB2UTIL_VERSION "1.0.7 beta"
