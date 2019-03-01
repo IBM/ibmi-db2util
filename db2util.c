@@ -16,16 +16,6 @@
 #define DB2UTIL_EXPAND_OTHER 64
 #define DB2UTIL_EXPAND_COL_NAME 128
 
-#define DB2UTIL_UNKNOWN -1
-
-#define DB2UTIL_CMD_HELP 1
-#define DB2UTIL_CMD_QUERY 2
-
-#define DB2UTIL_OUT_FORMAT 10
-
-
-#define DB2UTIL_ARG_INPUT 20
-
 enum {
   FORMAT_JSON,
   FORMAT_CSV,
@@ -330,14 +320,14 @@ int db2util_query(char * stmt_str, int fmt, int argc, char *argv[]) {
   return rc;
 }
 
-void db2util_help(int fmt) {
-  printf("Syntax: db2util 'sql statement' [-h -o [json|comma|space] -p parm1 parm2 ...]\n");
+void db2util_help() {
+  printf("Syntax: db2util [-h -o [json|comma|space] -p parm1 -p parm2 ...] 'sql statement'\n");
   printf("-h      help\n");
   printf("-o [json|comma|space]\n");
   printf(" json  - {\"records\":[{\"name\"}:{\"value\"},{\"name\"}:{\"value\"},...]}\n");
   printf(" comma - \"value\",\"value\",...\n");
   printf(" space - \"value\" \"value\" ...\n");
-  printf("-p parm1 parm2 ...\n");
+  printf("-p parm1 \n");
   printf("Version: %s\n", DB2UTIL_VERSION);
   printf("\nExample (DB2)\n");
   printf("db2util \"select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'\"\n");
@@ -345,99 +335,57 @@ void db2util_help(int fmt) {
   printf("db2util \"select * from QIWS/QCUSTCDT where LSTNAM=? or LSTNAM=?\" -p Jones Vine -o space\n");
 }
 
-int db2util_hash_key(char * str) {
-  int key = DB2UTIL_UNKNOWN;
-  if (strcmp(str,"-h") == 0) {
-    key = DB2UTIL_CMD_HELP;
-  } else if (strcmp(str,"-o") == 0) {
-    key = DB2UTIL_OUT_FORMAT;
-  } else if (strcmp(str,"json") == 0) {
-    key = FORMAT_JSON;
-  } else if (strcmp(str,"comma") == 0) {
-    key = FORMAT_CSV;
-  } else if (strcmp(str,"space") == 0) {
-    key = FORMAT_SPACE;
-  } else if (strcmp(str,"-p") == 0) {
-    key = DB2UTIL_ARG_INPUT;
-  }
-  return key;
-}
+int main(int argc, char* const* argv) {
+  int parm_count = 0;
+  static const char* parms[DB2UTIL_MAX_ARGS];
+  int format = FORMAT_CSV;
 
-int main(int argc, char *argv[]) {
-  SQLRETURN rc = 0;
-  int i = 0;
-  int iargc = 0;
-  char *iargv[DB2UTIL_MAX_ARGS];
-  int command = DB2UTIL_CMD_HELP;
-  int fmt = FORMAT_CSV;
-  int have = DB2UTIL_UNKNOWN;
-  char * query = NULL;
-  int test = DB2UTIL_UNKNOWN;
-  int test2 = DB2UTIL_UNKNOWN;
-  char buffer[4096];
-  /* clear parm markers */
-  for (i=0; i < DB2UTIL_MAX_ARGS; i++) {
-    iargv[i] = NULL;
-  }
-  /* input args */
-  for (i=1; i < argc; i++) {
-    test = db2util_hash_key(argv[i]);
-    switch (test) {
-    /* -p parm1 parm2 */
-    case DB2UTIL_ARG_INPUT:
-      for (i++; i < argc; i++) {
-        test2 = db2util_hash_key(argv[i]);
-        if (test2 != DB2UTIL_UNKNOWN) {
-          i--;
-          break;
-        }
-        iargv[iargc] = argv[i];
-        iargc += 1;
+  int opt;
+  while ((opt = getopt(argc, argv, "ho:p:")) != -1) {
+    switch(opt) {
+    case 'h':
+      db2util_help();
+      return 0;
+
+    case 'o':
+      if (strcmp(optarg, "json") == 0) {
+        format = FORMAT_JSON;
+      }
+      else if (strcmp(optarg, "comma") == 0 ||
+               strcmp(optarg, "csv") == 0) {
+        format = FORMAT_CSV;
+      }
+      else if (strcmp(optarg, "space") == 0) {
+        format = FORMAT_SPACE;
+      }
+      else {
+        db2util_help();
+        return 1;
       }
       break;
-    /* -o [json|comma|space] */
-    case DB2UTIL_OUT_FORMAT:
-      if (i + 1 < argc) {
-        test2 = db2util_hash_key(argv[i+1]);
-        switch (test2) {
-        case FORMAT_CSV:
-        case FORMAT_JSON:
-        case FORMAT_SPACE:
-          fmt = test2;
-          i += 1;
-          break;
-        default:
-          break;
-        }
+
+    case 'p':
+      if (parm_count == DB2UTIL_MAX_ARGS) {
+        fprintf(stderr, "Exceeded the max # of input arguments (%d)\n", DB2UTIL_MAX_ARGS);
+        return 1;
       }
+
+      parms[parm_count++] = optarg;
       break;
-    /* -h */
-    case DB2UTIL_CMD_HELP:
-      command = DB2UTIL_CMD_HELP;
-      i = argc + 1;
-      break;
-    case DB2UTIL_UNKNOWN:
-    default:
-      if (i == 1) {
-        query = argv[i];
-        command = DB2UTIL_CMD_QUERY;
-      }
-      break;
+
+    case '?':
+    case ':':
+      db2util_help();
+      return 1;
     }
   }
-  /* -h */
-  if (!query) {
-    command = DB2UTIL_CMD_HELP;
+
+  if (argc - optind != 1) {
+    db2util_help();
+    return 1;
   }
-  /* run */
-  switch(command) {
-  case DB2UTIL_CMD_QUERY:
-    return db2util_query(query,fmt,iargc,iargv);
-    break;
-  case DB2UTIL_CMD_HELP:
-  default:
-    db2util_help(fmt);
-    break;
-  }
-  return -1;
+
+  db2util_query(argv[optind], format, parm_count, parms);
+
+  return 0;
 }
