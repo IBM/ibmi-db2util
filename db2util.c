@@ -129,9 +129,12 @@ static int db2util_query(char* stmt, int fmt, int argc, const char* argv[]) {
     SQLSMALLINT type;
     SQLINTEGER precision;
     SQLSMALLINT scale;
-    SQLSMALLINT nullable;
+    
+    // IBM i CLI doesn't allow passing NULL for parameters we
+    // don't care about, so we just pass a field and ignore it.
+    SQLSMALLINT ignore __attribute__((unused));
 
-    rc = SQLDescribeParam(hstmt, i+1, &type, &precision, &scale, &nullable);
+    rc = SQLDescribeParam(hstmt, i+1, &type, &precision, &scale, &ignore);
     check_error(hstmt, SQL_HANDLE_STMT, rc);
 
     rc = SQLBindParameter(hstmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, type,
@@ -155,7 +158,10 @@ static int db2util_query(char* stmt, int fmt, int argc, const char* argv[]) {
     col_info_t* col = &cols[i];
 
     SQLINTEGER size;
-    SQLSMALLINT ignore;
+    
+    // IBM i CLI doesn't allow passing NULL for parameters we
+    // don't care about, so we just pass a field and ignore it.
+    SQLSMALLINT ignore __attribute__((unused));
 
     rc = SQLDescribeCol(hstmt, i+1, col->name, sizeof(col->name), &ignore, &col->type, &size, &ignore, &ignore);
     check_error(hstmt, SQL_HANDLE_STMT, rc);
