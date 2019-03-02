@@ -63,12 +63,34 @@ db2util "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'"
 
 ### JSON output `(-o json`)
 
+The original JSON format returns an array of objects inside an object with a single key "records". The whole encasing object is redundant. The new JSON format returns only an array of object records. The only difference between the two is the removal of the redundant encasing object.
+
+To switch between the two formats, use the `DB2UTIL_JSON_CONTAINER` environment variable. If this variable is unset or contains "object", the old format will be returned. If it's set to "array", the new format will be returned. Any other value will cause an error message to be displayed and the command to exit.
+
+**NOTE: It is advised to always set `DB2UTIL_JSON_CONTAINER` to your preferred format, as the default value may change in a future version**
+
+- Array container
+
 ```sh
+export DB2UTIL_JSON_CONTAINER=array
+
 db2util -o json "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'"
 [
 {"CUSNUM":839283,"LSTNAM":"Jones   ","INIT":"B D","STREET":"21B NW 135 St","CITY":"Clay  ","STATE":"NY","ZIPCOD":13041,"CDTLMT":400,"CHGCOD":1,"BALDUE":100.00,"CDTDUE":0.00},
 {"CUSNUM":392859,"LSTNAM":"Vine    ","INIT":"S S","STREET":"PO Box 79    ","CITY":"Broton","STATE":"VT","ZIPCOD":5046,"CDTLMT":700,"CHGCOD":1,"BALDUE":439.00,"CDTDUE":0.00}
 ]
+```
+
+- Object container (deprecated)
+
+```sh
+export DB2UTIL_JSON_CONTAINER=object
+
+db2util -o json "select * from QIWS/QCUSTCDT where LSTNAM='Jones' or LSTNAM='Vine'"
+{"records":[
+{"CUSNUM":839283,"LSTNAM":"Jones   ","INIT":"B D","STREET":"21B NW 135 St","CITY":"Clay  ","STATE":"NY","ZIPCOD":13041,"CDTLMT":400,"CHGCOD":1,"BALDUE":100.00,"CDTDUE":0.00},
+{"CUSNUM":392859,"LSTNAM":"Vine    ","INIT":"S S","STREET":"PO Box 79    ","CITY":"Broton","STATE":"VT","ZIPCOD":5046,"CDTLMT":700,"CHGCOD":1,"BALDUE":439.00,"CDTDUE":0.00}
+]}
 ```
 
 ### Space delimter output (`-o space`)

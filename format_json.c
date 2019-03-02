@@ -1,15 +1,33 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "db2util.h"
 
 struct state {
     const char* row_separator;
+    const char* start_extra;
+    const char* end_extra;
 };
+
 
 static void* json_format_new(void) {
     struct state* st = malloc(sizeof(struct state));
 
     st->row_separator = "";
+
+    const char* json_format = getenv("DB2UTIL_JSON_CONTAINER");
+    if (!json_format || strcmp(json_format, "object") == 0) {
+        st->start_extra = "{\"records\":";
+        st->end_extra = "}\n";
+    }
+    else if (strcmp(json_format, "array") == 0) {
+        st->start_extra = "";
+        st->end_extra = "";
+    }
+    else {
+        fprintf(stderr, "Invalid value for DB2UTIL_JSON_CONTAINER: %s\n", json_format);
+        exit(2);
+    }
 
     return st;
 }
@@ -67,12 +85,18 @@ static void json_row(FILE* f, void* state, col_info_t* cols, int count) {
 static void json_start_rows(FILE* f, void* state) {
     struct state* st = state;
 
+    fputs(st->start_extra, f);
+    fputs("[\n", f);
+
     st->row_separator = "";
-    fprintf(f, "[\n");
 }
 
 static void json_end_rows(FILE* f, void* state) {
-    fprintf(f, "\n]\n");
+    struct state* st = state;
+    
+    fputs("\n]", f);
+    fputs(st->end_extra, f);
+    fputs("\n", f);
 }
 
 format_t json_format = {
