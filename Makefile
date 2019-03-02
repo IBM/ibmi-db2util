@@ -5,7 +5,7 @@ LIBDIR=$(PREFIX)/lib
 
 CC=gcc
 CPPFLAGS=-I/QOpenSys/pkgs/include/cli
-CFLAGS=-g -maix64
+CFLAGS=-g -maix64 -Wall
 LDFLAGS=-maix64 -ldb400 -Wl,-blibpath:/QOpenSys/usr/lib
 
 all: db2util

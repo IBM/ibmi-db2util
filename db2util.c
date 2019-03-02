@@ -127,7 +127,7 @@ static int db2util_query(char* stmt, int fmt, int argc, const char* argv[]) {
   SQLINTEGER input_indicator = SQL_NTS;
   for (int i = 0; i < param_count; i++) {
     SQLSMALLINT type;
-    SQLUINTEGER precision;
+    SQLINTEGER precision;
     SQLSMALLINT scale;
     SQLSMALLINT nullable;
 
@@ -154,7 +154,7 @@ static int db2util_query(char* stmt, int fmt, int argc, const char* argv[]) {
   for (int i = 0 ; i < column_count; i++) {
     col_info_t* col = &cols[i];
 
-    SQLUINTEGER size;
+    SQLINTEGER size;
     SQLSMALLINT ignore;
 
     rc = SQLDescribeCol(hstmt, i+1, col->name, sizeof(col->name), &ignore, &col->type, &size, &ignore, &ignore);
