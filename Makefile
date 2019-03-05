@@ -1,33 +1,26 @@
 ### make
-CC                 = gcc
-INCLUDEPATH        = -I. -I/QOpenSys/pkgs/include/cli
-LIBDEPALL          = -L.  -liconv -ldl -lpthread -ldb400
+PREFIX=/QOpenSys/pkgs
+BINDIR=$(PREFIX)/bin
+LIBDIR=$(PREFIX)/lib
 
-###  shared lib
+CC=gcc
+CPPFLAGS=-I/QOpenSys/pkgs/include/cli
+CFLAGS=-g -maix64 -Wall
+LDFLAGS=-maix64 -ldb400 -Wl,-blibpath:/QOpenSys/usr/lib
 
-### DB2UTIL
-DB2UTILPGM      = db2util
-DB2UTILLIBOBJS  = db2util.o
-DB2UTILLIBDEPS  = $(LIBDEPALL)
-DB2UTILLIBEXPS    = -Wl,-bE:db2util.exp
-CCFLAGS            = -g -maix64 -pthread
-
-### tells make all things to do (ordered)
-all: $(DB2UTILPGM)
+all: db2util
 
 ### generic rules
 ### (note: .c.o compiles all c parts in OBJS list)
 .SUFFIXES: .o .c
-.c.o:
-	$(CC) $(CCFLAGS) $(INCLUDEPATH) -c $<
 
-$(DB2UTILPGM): $(DB2UTILLIBOBJS)
-	$(CC) $(CCFLAGS) $(DB2UTILLIBOBJS) $(DB2UTILLIBDEPS) $(DB2UTILLIBEXPS) -o $(DB2UTILPGM)
+db2util: db2util.o format_json.o format_csv.o format_space.o
+	$(CC) -o $@ $(LDFLAGS) -o $@ $^
 
-install: $(DB2UTILPGM)
-	mkdir -p $(DESTDIR)/QOpenSys/pkgs/bin/
-	cp $(DB2UTILPGM)  $(DESTDIR)/QOpenSys/pkgs/bin
+install: db2util
+	mkdir -p $(DESTDIR)$(BINDIR)
+	cp db2util $(DESTDIR)$(BINDIR)
 
 clean:
-	rm -f $(DB2UTILPGM) $(DB2UTILLIBOBJS)
+	rm *.o db2util
 
