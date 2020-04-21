@@ -13,7 +13,30 @@ static void csv_row(FILE* f, void* state, col_info_t* cols, int count) {
     const char* separator = "";
 
     for(int i = 0; i < count; ++i) {
-        printf("%s\"%.*s\"", separator, cols[i].ind, cols[i].data);
+        col_info_t* col = &cols[i];
+        
+        const char* buffer = col->data;
+        int length = col->ind;
+
+        if(length == SQL_NULL_DATA) {
+            buffer = "null";
+            length = 4;
+        } 
+        else if (length == SQL_NTS) {
+            length = strlen(buffer);
+        }
+        
+        printf("%s\"", separator);
+        
+        for (int y = 0; y < length; y++) {
+            if (buffer[y] == '"') {
+                putchar('"');
+            }
+            putchar(buffer[y]);
+        }
+        
+        putchar('"');
+        
         separator = ",";
     }
 
