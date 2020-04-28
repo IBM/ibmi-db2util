@@ -72,9 +72,47 @@ static void json_row(FILE* f, void* state, col_info_t* cols, int count) {
         if(length == SQL_NULL_DATA) {
             buffer = "null";
             length = 4;
+        } 
+        else if (length == SQL_NTS) {
+            length = strlen(buffer);
         }
-
-        printf("%s\"%s\":%s%.*s%s", comma, col->name, quote, length, buffer, quote);
+        
+        printf("%s\"%s\":%s", comma, col->name, quote);
+        
+        for (int y = 0; y < length; y++) {
+            switch (buffer[y]) {
+                case '\n':
+                    putchar('\\');
+                    putchar('n');
+                    break;
+                case '\t':
+                    putchar('\\');
+                    putchar('t');
+                    break;
+                case '\r':
+                    putchar('\\');
+                    putchar('r');
+                    break;
+                case '\f':
+                    putchar('\\');
+                    putchar('f');
+                    break;
+                case '\b':
+                    putchar('\\');
+                    putchar('b');
+                    break;
+                    
+                case '\\':
+                case '"':
+                    putchar('\\');
+                    // fall through
+                default:
+                    putchar(buffer[y]);
+                    break;
+            }
+        }
+        
+        printf("%s", quote);
 
         comma = ",";
     }
