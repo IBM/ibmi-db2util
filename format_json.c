@@ -69,11 +69,11 @@ static void json_row(FILE* f, void* state, col_info_t* cols, int count) {
         const char* buffer = col->data;
         int length = col->ind;
 
-        if(length == SQL_NULL_DATA || length == SQL_DATA_AT_EXEC) {
+        if(length == SQL_NULL_DATA) {
             buffer = "null";
             length = 4;
-        } 
-        else if (length == SQL_NTS) {
+        }
+        else if (length == SQL_NTS || length == SQL_DATA_AT_EXEC) {
             length = strlen(buffer);
         }
 
