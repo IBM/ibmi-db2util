@@ -73,9 +73,6 @@ static void json_row(FILE* f, void* state, col_info_t* cols, int count) {
             buffer = "null";
             length = 4;
         }
-        else if (length == SQL_NTS) {
-            length = strlen(buffer);
-        }
 
         printf("%s\"%s\":%s", comma, col->name, quote);
         
