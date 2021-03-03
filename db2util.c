@@ -231,6 +231,10 @@ static int db2util_query(char* stmt, int fmt, int argc, const char* argv[]) {
     for (int i = 0; i < column_count; ++i) {
       col_info_t* col = cols + i;
 
+      if (col->ind == SQL_NTS) {
+        col->ind = strlen(col->data);
+      }
+
       switch(col->type) {
       case SQL_DECIMAL:
       case SQL_NUMERIC:
