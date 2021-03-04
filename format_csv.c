@@ -21,9 +21,6 @@ static void csv_row(FILE* f, void* state, col_info_t* cols, int count) {
         if(length == SQL_NULL_DATA) {
             buffer = "null";
             length = 4;
-        } 
-        else if (length == SQL_NTS) {
-            length = strlen(buffer);
         }
         
         printf("%s\"", separator);
