@@ -13,6 +13,7 @@ typedef struct {
   SQLSMALLINT bind_type;
   SQLINTEGER ind;
   char* buffer;
+  char* bind_ptr;
   char* data;
   size_t buffer_length;
   char name[129];
