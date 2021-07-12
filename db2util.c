@@ -181,7 +181,7 @@ static int db2util_query(char* stmt, int fmt, int argc, const char* argv[]) {
     default:
       col->bind_type = SQL_C_CHAR;
       col->buffer_length = bind_length = size * 3;
-      col->buffer = col->data = malloc(col->buffer_length);
+      col->buffer = col->data = col->bind_ptr = malloc(col->buffer_length);
       break;
 
     case SQL_BINARY:
@@ -189,7 +189,7 @@ static int db2util_query(char* stmt, int fmt, int argc, const char* argv[]) {
     case SQL_BLOB:
       col->bind_type = SQL_C_CHAR;
       col->buffer_length = bind_length = size * 3;
-      col->buffer = col->data = malloc(col->buffer_length);
+      col->buffer = col->data = col->bind_ptr = malloc(col->buffer_length);
       break;
 
     case SQL_DECFLOAT:
@@ -201,7 +201,7 @@ static int db2util_query(char* stmt, int fmt, int argc, const char* argv[]) {
       col->bind_type = SQL_C_CHAR;
       col->buffer_length = 100;
       col->buffer = malloc(col->buffer_length);
-      col->data = col->buffer + 1;
+      col->data = col->bind_ptr = col->buffer + 1;
       bind_length = col->buffer_length - 1;
       break;
 
@@ -214,11 +214,11 @@ static int db2util_query(char* stmt, int fmt, int argc, const char* argv[]) {
     case SQL_INTEGER:
       col->bind_type = SQL_C_CHAR;
       col->buffer_length = bind_length = 100;
-      col->buffer = col->data = malloc(col->buffer_length);
+      col->buffer = col->data = col->bind_ptr = malloc(col->buffer_length);
       break;
     }
 
-    rc = SQLBindCol(hstmt, i+1, col->bind_type, col->data, bind_length, &col->ind);
+    rc = SQLBindCol(hstmt, i+1, col->bind_type, col->bind_ptr, bind_length, &col->ind);
     check_error(hstmt, SQL_HANDLE_STMT, rc);
   }
 
@@ -232,7 +232,7 @@ static int db2util_query(char* stmt, int fmt, int argc, const char* argv[]) {
       col_info_t* col = cols + i;
 
       if (col->ind == SQL_NTS) {
-        col->ind = strlen(col->data);
+        col->ind = strlen(col->bind_ptr);
       }
 
       switch(col->type) {
