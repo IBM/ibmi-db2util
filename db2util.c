@@ -126,19 +126,14 @@ static int db2util_query(char* stmt, int fmt, int argc, const char* argv[]) {
   
   SQLINTEGER input_indicator = SQL_NTS;
   for (int i = 0; i < param_count; i++) {
-    SQLSMALLINT type;
-    SQLINTEGER precision;
-    SQLSMALLINT scale;
-    
-    // IBM i CLI doesn't allow passing NULL for parameters we
-    // don't care about, so we just pass a field and ignore it.
-    SQLSMALLINT ignore __attribute__((unused));
+    const char* arg = argv[i];
+    size_t precision = strlen(arg);
 
-    rc = SQLDescribeParam(hstmt, i+1, &type, &precision, &scale, &ignore);
-    check_error(hstmt, SQL_HANDLE_STMT, rc);
-
-    rc = SQLBindParameter(hstmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, type,
-                          precision, scale, (SQLCHAR*) argv[i], 0, &input_indicator);
+    // NOTE: We specify SQL_CHAR since that saves calling SQLDescribeParam to
+    //       get the actual type and SQLBindParameter doesn't use this value
+    //       unless we specify SQL_C_DEFAULT anyway.
+    rc = SQLBindParameter(hstmt, i+1, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_CHAR,
+                          precision, 0, (SQLCHAR*) arg, 0, &input_indicator);
     check_error(hstmt, SQL_HANDLE_STMT, rc);
   }
 
