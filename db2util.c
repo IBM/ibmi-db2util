@@ -198,6 +198,12 @@ static int db2util_query(char* stmt, int fmt, int argc, const char* argv[]) {
     case SQL_DOUBLE:
     case SQL_DECIMAL:
     case SQL_NUMERIC:
+      // JSON is particular about its number formats and wants always a leading
+      // zero when less than 1, which Db2 does not do. To accomodate this, we
+      // reserve space for the leading zero by setting bind_ptr 1 byte in to
+      // the allocated buffer. When needed, the fetch code below can use this
+      // reserved byte to insert a leading zero and adjust the data pointer to
+      // point to the new start of the data.
       col->bind_type = SQL_C_CHAR;
       col->buffer_length = 100;
       col->buffer = malloc(col->buffer_length);
@@ -243,20 +249,33 @@ static int db2util_query(char* stmt, int fmt, int argc, const char* argv[]) {
       case SQL_FLOAT:
       case SQL_DOUBLE:
         if (col->ind == SQL_NULL_DATA) break;
+
+        // If needed add leading zero & adjust data pointer and length
+        //
+        // NOTE: bind_ptr was set to to &buffer[1] before binding
         if (col->buffer[1] == '.') {
+          // Positive number less than 1
+          // Insert a leading 0
+          // eg. .12345 -> 0.12345
           col->buffer[0] = '0';
-          col->buffer[1] = '.';
           col->data = col->buffer;
           col->ind++;
         }
         else if (col->buffer[1] == '-' && col->buffer[2] == '.') {
+          // Negative number less than 1
+          // Move sign to the left and insert a 0
+          // eg. -.54321 -> -0.54321
           col->buffer[0] = '-';
           col->buffer[1] = '0';
           col->data = col->buffer;
           col->ind++;
         }
         else {
-          col->data = col->buffer + 1;
+          // Positive or negative number greater than or equal to 1
+          //
+          // No adjustment needed, but we still need to explicitly set data in
+          // case it was adjusted for a previous row
+          col->data = col->bind_ptr;
         }
         break;
 
