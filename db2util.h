@@ -5,7 +5,7 @@
 #include <sqlcli1.h>
 #include <stddef.h>
 
-#define DB2UTIL_VERSION "1.0.12"
+#define DB2UTIL_VERSION "1.0.13-dev"
 #define DB2UTIL_MAX_ARGS 32
 
 typedef struct {
